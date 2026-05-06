@@ -6,24 +6,14 @@ Mengubah temuan teknis menjadi narasi manajemen yang ringkas dan tajam.
 import os
 from langchain_openai import ChatOpenAI
 
-OPENAI_API_KEY  = os.getenv("OPENAI_API_KEY", "")
 DINOIKI_API_KEY = os.getenv("DINOIKI_API_KEY", "")
-MODEL_NAME      = os.getenv("LLM_MODEL", "gpt-4o-mini")
 
-# Dukung DINOIKI (proxy OpenAI-compatible) atau OpenAI langsung
-if DINOIKI_API_KEY:
-    llm = ChatOpenAI(
-        model=MODEL_NAME,
-        api_key=DINOIKI_API_KEY,
-        base_url=os.getenv("DINOIKI_BASE_URL", "https://api.dinoiki.com/v1"),
-        temperature=0.3,
-    )
-else:
-    llm = ChatOpenAI(
-        model=MODEL_NAME,
-        api_key=OPENAI_API_KEY,
-        temperature=0.3,
-    )
+llm = ChatOpenAI(
+    model="gpt-4o-mini",
+    api_key=DINOIKI_API_KEY,
+    base_url="https://ai.dinoiki.com/v1",
+    temperature=0.3,
+)
 
 
 SYSTEM_PROMPT = """Anda adalah Executive Governance & Reporting Agent untuk operasi kilang minyak.
