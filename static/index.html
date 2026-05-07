@@ -546,6 +546,9 @@ body {
             <h2>Daily Report</h2>
             <p>Ringkasan operasional harian dari seluruh refinery unit</p>
           </div>
+          <button class="btn btn-primary" id="btn-gen-daily" onclick="triggerGenerate('daily')">
+            <span id="btn-gen-daily-text">▶ Generate Sekarang</span>
+          </button>
         </div>
         <div class="stats-row">
           <div class="stat-card">
@@ -571,6 +574,9 @@ body {
             <h2>Weekly Review</h2>
             <p>Ringkasan mingguan — tren, deviasi, dan isu utama</p>
           </div>
+          <button class="btn btn-primary" id="btn-gen-weekly" onclick="triggerGenerate('weekly')">
+            <span id="btn-gen-weekly-text">▶ Generate Sekarang</span>
+          </button>
         </div>
         <div class="stats-row">
           <div class="stat-card">
@@ -596,6 +602,9 @@ body {
             <h2>Monthly Management Pack</h2>
             <p>Laporan bulanan komprehensif untuk manajemen senior</p>
           </div>
+          <button class="btn btn-primary" id="btn-gen-monthly" onclick="triggerGenerate('monthly')">
+            <span id="btn-gen-monthly-text">▶ Generate Sekarang</span>
+          </button>
         </div>
         <div class="stats-row">
           <div class="stat-card">
@@ -1031,6 +1040,32 @@ function emptyState(title, sub) {
 }
 function errorState(msg) {
   return `<div class="empty-state"><div class="icon">⚠️</div><h4>${msg}</h4><p>Periksa koneksi database</p></div>`;
+}
+
+
+/* ═══════════════════════════════════════════════
+   Generate Report Manual (Daily / Weekly / Monthly)
+═══════════════════════════════════════════════ */
+async function triggerGenerate(type) {
+  const btn   = document.getElementById('btn-gen-' + type);
+  const btnTx = document.getElementById('btn-gen-' + type + '-text');
+  const labels = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+  const label  = labels[type];
+  if (!confirm('Generate ' + label + ' Report sekarang?\nProses membutuhkan ±15–30 detik.')) return;
+  btn.disabled = true;
+  btnTx.innerHTML = '<span class="spinner"></span> Generating...';
+  try {
+    const res  = await fetch('/api/generate/' + type, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Generate gagal', 'error'); return; }
+    showToast('✅ ' + label + ' Report berhasil digenerate!', 'success');
+    loadReports(type);
+  } catch (e) {
+    showToast('Terjadi kesalahan saat generate', 'error');
+  } finally {
+    btn.disabled = false;
+    btnTx.textContent = '▶ Generate Sekarang';
+  }
 }
 
 function showToast(msg, type = 'success') {
