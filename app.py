@@ -167,31 +167,52 @@ def api_sap_upload():
     batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:6]
     results  = []
 
+    # Pre-scan semua file untuk tentukan tipe, lalu truncate sekali di awal
+    tmp_files = []
+    parsed_all = []
+    has_notif = False
+    has_wo    = False
+
     for f in files:
         if not f.filename.endswith('.xlsx'):
             results.append({"file": f.filename, "status": "skip", "reason": "Bukan file .xlsx"})
             continue
-
         tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        f.save(tmp.name)
         try:
-            f.save(tmp.name)
             parsed = sap_parser.parse_file(tmp.name, batch_id)
+            parsed_all.append((f.filename, tmp.name, parsed))
+            if parsed["type"] == "notification": has_notif = True
+            if parsed["type"] == "work_order":   has_wo    = True
+        except Exception as e:
+            results.append({"file": f.filename, "status": "error", "reason": str(e)})
+            os.unlink(tmp.name)
 
+    # Truncate sekali per tipe sebelum insert
+    try:
+        if has_notif: db.clear_sap_batch("ALL", "sap_notifications")
+        if has_wo:    db.clear_sap_batch("ALL", "sap_work_orders")
+    except Exception as e:
+        return jsonify({"error": f"Gagal clear data lama: {str(e)}"}), 500
+
+    # Insert semua
+    for filename, tmppath, parsed in parsed_all:
+        try:
             if parsed["type"] == "notification":
                 db.insert_sap_notifications(parsed["rows"], batch_id)
-                results.append({"file": f.filename, "status": "ok",
+                results.append({"file": filename, "status": "ok",
                                  "type": "notification", "rows": parsed["count"]})
             elif parsed["type"] == "work_order":
                 db.insert_sap_work_orders(parsed["rows"], batch_id)
-                results.append({"file": f.filename, "status": "ok",
+                results.append({"file": filename, "status": "ok",
                                  "type": "work_order", "rows": parsed["count"]})
             else:
-                results.append({"file": f.filename, "status": "skip",
+                results.append({"file": filename, "status": "skip",
                                  "reason": "Format tidak dikenali"})
         except Exception as e:
-            results.append({"file": f.filename, "status": "error", "reason": str(e)})
+            results.append({"file": filename, "status": "error", "reason": str(e)})
         finally:
-            os.unlink(tmp.name)
+            os.unlink(tmppath)
 
     total_ok = sum(1 for r in results if r["status"] == "ok")
     return jsonify({"batch_id": batch_id, "results": results,

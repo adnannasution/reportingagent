@@ -1159,6 +1159,255 @@ function showToast(msg, type = 'success') {
   wrap.appendChild(el);
   setTimeout(() => el.remove(), 3500);
 }
+
+/* ═══════════════════════════════════════════════
+   Control Tower
+═══════════════════════════════════════════════ */
+async function loadControlTower() {
+  const listEl = document.getElementById('list-ct');
+  try {
+    const [ctRes, sapRes] = await Promise.all([
+      fetch('/api/control-tower').then(r => r.json()).catch(() => []),
+      fetch('/api/sap/summary').then(r => r.json()).catch(() => ({notifications:{total:0},work_orders:{total:0}})),
+    ]);
+    const ctCount    = Array.isArray(ctRes) ? ctRes.length : 0;
+    const notifTotal = sapRes.notifications?.total ?? 0;
+    const woTotal    = sapRes.work_orders?.total ?? 0;
+    document.getElementById('badge-ct').textContent       = ctCount;
+    document.getElementById('stat-ct-total').textContent  = ctCount;
+    document.getElementById('stat-sap-notif').textContent = notifTotal;
+    document.getElementById('stat-sap-wo').textContent    = woTotal;
+    if (!Array.isArray(ctRes) || !ctRes.length) {
+      listEl.innerHTML = emptyState('Belum ada Control Tower Report',
+        notifTotal > 0 ? 'Data SAP sudah ada, klik "Generate Report" untuk mulai' :
+        'Upload data SAP terlebih dahulu, lalu klik "Generate Report"');
+    } else {
+      listEl.innerHTML = ctRes.map(r => {
+        const d  = new Date(r.created_at);
+        const ds = d.toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
+        const preview = (r.preview || '').replace(/#+\s*/g, '').slice(0, 160);
+        return '<div class="report-card" onclick="openCTDetail(' + r.id + ')">' +
+          '<div class="type-dot memo">🗼</div>' +
+          '<div class="meta">' +
+          '<h4>' + escHtml(r.title || 'Control Tower Report') + '</h4>' +
+          '<div class="preview">' + escHtml(preview) + '…</div>' +
+          '<div class="time">' + ds + '</div>' +
+          '</div></div>';
+      }).join('');
+    }
+    updateSapDbInfo(sapRes);
+  } catch(e) {
+    listEl.innerHTML = errorState('Gagal memuat Control Tower');
+    ['stat-ct-total','stat-sap-notif','stat-sap-wo'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && el.textContent === '—') el.textContent = '0';
+    });
+  }
+}
+
+function updateSapDbInfo(sapRes) {
+  const el = document.getElementById('sap-db-info');
+  if (!el) return;
+  const nTotal = sapRes.notifications?.total || 0;
+  const wTotal = sapRes.work_orders?.total || 0;
+  const fmt = (v) => v ? new Date(v).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
+  const nLast = fmt(sapRes.notifications?.last_upload);
+  const wLast = fmt(sapRes.work_orders?.last_upload);
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+    '<div class="stat-card"><div class="label">SAP Notifications</div><div class="value">' + nTotal + '</div><div class="sub">Upload terakhir: ' + nLast + '</div></div>' +
+    '<div class="stat-card"><div class="label">SAP Work Orders</div><div class="value">' + wTotal + '</div><div class="sub">Upload terakhir: ' + wLast + '</div></div>' +
+    '</div>';
+}
+
+async function openCTDetail(id) {
+  document.getElementById('overlay-detail').classList.add('open');
+  document.getElementById('drawer-title').textContent = 'Memuat...';
+  document.getElementById('drawer-meta').innerHTML = '';
+  document.getElementById('drawer-content').innerHTML = '<div class="loading-row"><div class="spin-dark"></div> Memuat...</div>';
+  try {
+    const data = await fetch('/api/control-tower/' + id).then(r => r.json());
+    const d    = new Date(data.created_at);
+    document.getElementById('drawer-title').textContent = data.title || 'Control Tower Report';
+    document.getElementById('drawer-meta').innerHTML =
+      '<span class="badge-type badge-memo">Control Tower</span>' +
+      '<span style="font-size:.73rem;color:var(--ink-3)">' +
+      d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) + '</span>';
+    document.getElementById('drawer-content').innerHTML = renderMarkdown(data.content || '');
+  } catch {
+    document.getElementById('drawer-content').innerHTML = '<p style="color:var(--red)">Gagal memuat detail.</p>';
+  }
+}
+
+function openCTGenerate() {
+  document.getElementById('ct-context').value = '';
+  document.getElementById('ct-result').style.display = 'none';
+  document.getElementById('overlay-ct').classList.add('open');
+}
+
+async function submitCTGenerate() {
+  const btn     = document.getElementById('ct-btn');
+  const btnTx   = document.getElementById('ct-btn-text');
+  const context = document.getElementById('ct-context').value.trim();
+  const useDaily= document.getElementById('ct-use-daily').checked;
+  btn.disabled  = true;
+  btnTx.innerHTML = '<span class="spinner"></span> Menganalisis data SAP...';
+  try {
+    const res  = await fetch('/api/control-tower/generate', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({context, use_daily_report: useDaily})
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Generate gagal', 'error'); return; }
+    document.getElementById('ct-result').style.display = 'block';
+    document.getElementById('ct-result-content').innerHTML = renderMarkdown(data.content);
+    showToast('Control Tower Report berhasil digenerate!', 'success');
+    loadControlTower();
+  } catch { showToast('Terjadi kesalahan', 'error'); }
+  finally { btn.disabled = false; btnTx.textContent = '🗼 Generate Sekarang'; }
+}
+
+/* ═══════════════════════════════════════════════
+   SAP Upload + Progress Bar
+═══════════════════════════════════════════════ */
+let selectedFiles = [];
+
+function handleFileSelect(e) {
+  selectedFiles = Array.from(e.target.files);
+  renderFileList();
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').style.borderColor = 'var(--border-2)';
+  selectedFiles = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.xlsx'));
+  renderFileList();
+}
+
+function renderFileList() {
+  const listEl = document.getElementById('file-list');
+  const itemEl = document.getElementById('file-items');
+  const btnEl  = document.getElementById('upload-btn');
+  if (!selectedFiles.length) { listEl.style.display = 'none'; btnEl.style.display = 'none'; return; }
+  listEl.style.display = 'block';
+  btnEl.style.display  = 'flex';
+  itemEl.innerHTML = selectedFiles.map(function(f) {
+    const size = (f.size / 1024).toFixed(0);
+    const type = f.name.includes('IW29') ? 'Notification' : f.name.includes('IW39') ? 'Work Order' : 'Auto-detect';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--cream);border-radius:6px;margin-bottom:6px;font-size:.8rem">' +
+      '<span>📄</span>' +
+      '<span style="flex:1;font-weight:500;color:var(--ink-2)">' + escHtml(f.name) + '</span>' +
+      '<span style="color:var(--ink-3)">' + size + ' KB</span>' +
+      '<span class="badge-type badge-memo" style="font-size:.62rem">' + type + '</span>' +
+      '</div>';
+  }).join('');
+}
+
+async function submitUpload() {
+  if (!selectedFiles.length) return;
+  const btn   = document.getElementById('upload-btn');
+  const btnTx = document.getElementById('upload-btn-text');
+  btn.disabled = true;
+
+  const resultEl  = document.getElementById('upload-result');
+  const contentEl = document.getElementById('upload-result-content');
+  resultEl.style.display = 'block';
+
+  const totalSize = selectedFiles.reduce(function(s, f) { return s + f.size; }, 0);
+  const totalMB   = (totalSize / 1024 / 1024).toFixed(1);
+
+  contentEl.innerHTML =
+    '<div id="upload-progress-wrap">' +
+    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+    '<span style="font-size:.82rem;font-weight:600;color:var(--ink)" id="upload-step">Menyiapkan file...</span>' +
+    '<span style="font-size:.75rem;color:var(--ink-3)" id="upload-pct">0%</span>' +
+    '</div>' +
+    '<div style="background:var(--border);border-radius:99px;height:7px;overflow:hidden;margin-bottom:10px">' +
+    '<div id="upload-bar" style="background:var(--ink);height:100%;width:0%;border-radius:99px;transition:width .3s ease"></div>' +
+    '</div>' +
+    '<div style="font-size:.75rem;color:var(--ink-3)" id="upload-detail">' + selectedFiles.length + ' file · ' + totalMB + ' MB total</div>' +
+    '</div>';
+
+  const formData = new FormData();
+  selectedFiles.forEach(function(f) { formData.append('files', f); });
+
+  function setProgress(pct, step, detail) {
+    const bar = document.getElementById('upload-bar');
+    const pctEl = document.getElementById('upload-pct');
+    const stepEl = document.getElementById('upload-step');
+    const detailEl = document.getElementById('upload-detail');
+    if (bar) bar.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+    if (step && stepEl) stepEl.textContent = step;
+    if (detail && detailEl) detailEl.textContent = detail;
+  }
+
+  try {
+    const result = await new Promise(function(resolve, reject) {
+      const xhr = new XMLHttpRequest();
+
+      xhr.upload.addEventListener('progress', function(e) {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 80);
+          const mb  = (e.loaded / 1024 / 1024).toFixed(1);
+          const tot = (e.total  / 1024 / 1024).toFixed(1);
+          setProgress(pct, 'Mengupload file...', mb + ' MB / ' + tot + ' MB');
+        }
+      });
+
+      xhr.upload.addEventListener('loadend', function() {
+        setProgress(85, 'Memproses & menyimpan ke database...', 'Parsing Excel & insert ke PostgreSQL...');
+      });
+
+      xhr.addEventListener('load', function() {
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch { reject(new Error('Response tidak valid')); }
+      });
+      xhr.addEventListener('error', function() { reject(new Error('Network error')); });
+      xhr.addEventListener('timeout', function() { reject(new Error('Request timeout')); });
+
+      xhr.timeout = 120000; // 2 menit
+      xhr.open('POST', '/api/sap/upload');
+      xhr.send(formData);
+    });
+
+    setProgress(100, '✅ Selesai!', result.summary || '');
+
+    setTimeout(function() {
+      contentEl.innerHTML =
+        '<p style="font-size:.85rem;font-weight:600;color:var(--ink);margin-bottom:10px">' + escHtml(result.summary || '') + '</p>' +
+        (result.results || []).map(function(r) {
+          return '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;margin-bottom:6px;font-size:.8rem;background:' +
+            (r.status === 'ok' ? 'var(--green-bg)' : r.status === 'skip' ? 'var(--amber-bg)' : 'var(--red-bg)') + '">' +
+            '<span>' + (r.status === 'ok' ? '✅' : r.status === 'skip' ? '⏭️' : '❌') + '</span>' +
+            '<span style="flex:1;font-weight:500;color:var(--ink-2)">' + escHtml(r.file) + '</span>' +
+            (r.status === 'ok'
+              ? '<span style="color:var(--ink-3)">' + r.rows + ' rows · ' + r.type + '</span>'
+              : '<span style="color:var(--ink-3)">' + escHtml(r.reason || '') + '</span>') +
+            '</div>';
+        }).join('') +
+        '<p style="font-size:.72rem;color:var(--ink-3);margin-top:10px">Batch ID: ' + escHtml(result.batch_id || '') + '</p>';
+    }, 600);
+
+    showToast(result.summary || 'Upload selesai!', 'success');
+    selectedFiles = [];
+    document.getElementById('file-list').style.display = 'none';
+    document.getElementById('file-items').innerHTML = '';
+    btn.style.display = 'none';
+    document.getElementById('file-input').value = '';
+    fetch('/api/sap/summary').then(function(r) { return r.json(); }).then(updateSapDbInfo);
+    loadControlTower();
+
+  } catch(e) {
+    contentEl.innerHTML = '<div style="color:var(--red);font-size:.85rem">❌ ' + escHtml(e.message || 'Terjadi kesalahan') + '</div>';
+    showToast('Upload gagal', 'error');
+  } finally {
+    btn.disabled = false;
+    btnTx.textContent = '⬆ Upload Sekarang';
+  }
+}
+
 </script>
 
 <!-- ── Control Tower Generate Modal ─────────────── -->

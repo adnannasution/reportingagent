@@ -231,7 +231,10 @@ def fetch_talking_points_detail(tp_id):
 # ── SAP Upload helpers ────────────────────────────────────────────────────────
 def clear_sap_batch(batch_id: str, table: str):
     with db_cursor() as cur:
-        cur.execute(f"DELETE FROM {table} WHERE upload_batch=%s", (batch_id,))
+        if batch_id == "ALL":
+            cur.execute(f"TRUNCATE TABLE {table}")
+        else:
+            cur.execute(f"DELETE FROM {table} WHERE upload_batch=%s", (batch_id,))
 
 def insert_sap_notifications(rows: list, batch_id: str):
     with db_cursor() as cur:
