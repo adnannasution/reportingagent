@@ -710,6 +710,20 @@ body {
             <input type="file" id="file-input" multiple accept=".xlsx" style="display:none" onchange="handleFileSelect(event)"/>
           </div>
 
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button type="button" id="mode-tambah" onclick="setUploadMode('tambah')"
+              style="flex:1;padding:9px;border-radius:7px;border:1px solid var(--ink);background:var(--ink);color:white;font-size:.82rem;font-weight:600;cursor:pointer">
+              ➕ Tambah ke data existing
+            </button>
+            <button type="button" id="mode-replace" onclick="setUploadMode('replace')"
+              style="flex:1;padding:9px;border-radius:7px;border:1px solid var(--border);background:var(--white);color:var(--ink-2);font-size:.82rem;font-weight:500;cursor:pointer">
+              🔄 Replace semua data lama
+            </button>
+          </div>
+          <p id="upload-mode-desc" style="font-size:.73rem;color:var(--ink-3);margin-top:6px">
+            Mode: <strong>Tambah</strong> — data lama tetap ada, cocok untuk upload file satu-satu.
+          </p>
+
           <div id="file-list" style="margin-bottom:14px;display:none">
             <div style="font-size:.78rem;font-weight:600;color:var(--ink-2);margin-bottom:8px">File yang akan diupload:</div>
             <div id="file-items"></div>
@@ -1271,7 +1285,32 @@ async function submitCTGenerate() {
 /* ═══════════════════════════════════════════════
    SAP Upload + Progress Bar
 ═══════════════════════════════════════════════ */
-let selectedFiles = [];
+let selectedFiles  = [];
+let uploadMode     = 'tambah'; // 'tambah' atau 'replace'
+
+function setUploadMode(mode) {
+  uploadMode = mode;
+  const btnTambah  = document.getElementById('mode-tambah');
+  const btnReplace = document.getElementById('mode-replace');
+  const desc       = document.getElementById('upload-mode-desc');
+  if (mode === 'tambah') {
+    btnTambah.style.background  = 'var(--ink)';
+    btnTambah.style.color       = 'white';
+    btnTambah.style.borderColor = 'var(--ink)';
+    btnReplace.style.background = 'var(--white)';
+    btnReplace.style.color      = 'var(--ink-2)';
+    btnReplace.style.borderColor= 'var(--border)';
+    desc.innerHTML = 'Mode: <strong>Tambah</strong> — data lama tetap ada, cocok untuk upload file satu-satu.';
+  } else {
+    btnReplace.style.background = 'var(--red)';
+    btnReplace.style.color      = 'white';
+    btnReplace.style.borderColor= 'var(--red)';
+    btnTambah.style.background  = 'var(--white)';
+    btnTambah.style.color       = 'var(--ink-2)';
+    btnTambah.style.borderColor = 'var(--border)';
+    desc.innerHTML = 'Mode: <strong style="color:var(--red)">Replace</strong> — semua data lama akan dihapus dulu, lalu diganti dengan file baru.';
+  }
+}
 
 function handleFileSelect(e) {
   selectedFiles = Array.from(e.target.files);
@@ -1331,6 +1370,7 @@ async function submitUpload() {
 
   const formData = new FormData();
   selectedFiles.forEach(function(f) { formData.append('files', f); });
+  formData.append('mode', uploadMode);
 
   function setProgress(pct, step, detail) {
     const bar = document.getElementById('upload-bar');

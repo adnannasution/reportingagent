@@ -164,8 +164,9 @@ def api_sap_upload():
     if not files:
         return jsonify({"error": "Tidak ada file yang diupload"}), 400
 
-    batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:6]
-    results  = []
+    batch_id    = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:6]
+    upload_mode = request.form.get("mode", "tambah")  # 'tambah' atau 'replace'
+    results     = []
 
     # Pre-scan semua file untuk tentukan tipe, lalu truncate sekali di awal
     tmp_files = []
@@ -188,12 +189,13 @@ def api_sap_upload():
             results.append({"file": f.filename, "status": "error", "reason": str(e)})
             os.unlink(tmp.name)
 
-    # Truncate sekali per tipe sebelum insert
-    try:
-        if has_notif: db.clear_sap_batch("ALL", "sap_notifications")
-        if has_wo:    db.clear_sap_batch("ALL", "sap_work_orders")
-    except Exception as e:
-        return jsonify({"error": f"Gagal clear data lama: {str(e)}"}), 500
+    # Truncate hanya kalau mode replace
+    if upload_mode == "replace":
+        try:
+            if has_notif: db.clear_sap_batch("ALL", "sap_notifications")
+            if has_wo:    db.clear_sap_batch("ALL", "sap_work_orders")
+        except Exception as e:
+            return jsonify({"error": f"Gagal clear data lama: {str(e)}"}), 500
 
     # Insert semua
     for filename, tmppath, parsed in parsed_all:
