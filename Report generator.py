@@ -253,7 +253,7 @@ _Generated manual · {tgl}_"""
     report = ask_llm(prompt, max_tokens=2500)
     save_report("weekly", report)
     return report
-
+ 
 
 # ── MONTHLY ───────────────────────────────────────────────────────────────────
 def gather_monthly_data():
