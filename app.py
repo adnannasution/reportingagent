@@ -2,13 +2,11 @@
 app.py — Executive Governance Web App
 """
 
-import os
+import os, uuid, tempfile
 from datetime import datetime
 from flask import Flask, send_from_directory, request, jsonify
 from dotenv import load_dotenv
-import db
-import agent
-import report_generator
+import db, agent, report_generator, sap_parser, control_tower_agent
 
 load_dotenv()
 
@@ -16,6 +14,7 @@ BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
 
 try:
     db.run_migrations()
@@ -33,7 +32,7 @@ def health():
     return jsonify({"status": "ok"})
 
 
-# ── API: Reports (read) ───────────────────────────────────────────────────────
+# ── API: Reports ──────────────────────────────────────────────────────────────
 @app.route("/api/reports")
 def api_reports():
     rtype = request.args.get("type")
@@ -47,14 +46,13 @@ def api_reports():
 def api_report_detail(report_id):
     try:
         row = db.fetch_report_detail(report_id)
-        if not row:
-            return jsonify({"error": "Not found"}), 404
+        if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-# ── API: Generate Reports (manual trigger) ────────────────────────────────────
+# ── API: Generate Reports manual ──────────────────────────────────────────────
 @app.route("/api/generate/daily", methods=["POST"])
 def api_generate_daily():
     try:
@@ -93,8 +91,7 @@ def api_memos():
 def api_memo_detail(memo_id):
     try:
         row = db.fetch_memo_detail(memo_id)
-        if not row:
-            return jsonify({"error": "Not found"}), 404
+        if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -109,8 +106,7 @@ def api_generate_memo():
         return jsonify({"error": "Pilih minimal 1 report sebagai sumber"}), 400
     try:
         reports = db.fetch_reports_by_ids(report_ids)
-        if not reports:
-            return jsonify({"error": "Report tidak ditemukan"}), 404
+        if not reports: return jsonify({"error": "Report tidak ditemukan"}), 404
         content = agent.generate_memo(reports, custom_context=context)
         memo_id = db.save_memo(title, report_ids, content)
         return jsonify({"id": memo_id, "content": content})
@@ -131,8 +127,7 @@ def api_talking_points():
 def api_tp_detail(tp_id):
     try:
         row = db.fetch_talking_points_detail(tp_id)
-        if not row:
-            return jsonify({"error": "Not found"}), 404
+        if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -147,11 +142,113 @@ def api_generate_tp():
         return jsonify({"error": "Pilih minimal 1 report sebagai sumber"}), 400
     try:
         reports = db.fetch_reports_by_ids(report_ids)
-        if not reports:
-            return jsonify({"error": "Report tidak ditemukan"}), 404
+        if not reports: return jsonify({"error": "Report tidak ditemukan"}), 404
         content = agent.generate_talking_points(reports, custom_context=context)
         tp_id   = db.save_talking_points(title, report_ids, content)
         return jsonify({"id": tp_id, "content": content})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ── API: SAP Upload ───────────────────────────────────────────────────────────
+@app.route("/api/sap/summary")
+def api_sap_summary():
+    try:
+        return jsonify(db.get_sap_summary())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/sap/upload", methods=["POST"])
+def api_sap_upload():
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"error": "Tidak ada file yang diupload"}), 400
+
+    batch_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:6]
+    results  = []
+
+    for f in files:
+        if not f.filename.endswith('.xlsx'):
+            results.append({"file": f.filename, "status": "skip", "reason": "Bukan file .xlsx"})
+            continue
+
+        tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
+        try:
+            f.save(tmp.name)
+            parsed = sap_parser.parse_file(tmp.name, batch_id)
+
+            if parsed["type"] == "notification":
+                db.insert_sap_notifications(parsed["rows"], batch_id)
+                results.append({"file": f.filename, "status": "ok",
+                                 "type": "notification", "rows": parsed["count"]})
+            elif parsed["type"] == "work_order":
+                db.insert_sap_work_orders(parsed["rows"], batch_id)
+                results.append({"file": f.filename, "status": "ok",
+                                 "type": "work_order", "rows": parsed["count"]})
+            else:
+                results.append({"file": f.filename, "status": "skip",
+                                 "reason": "Format tidak dikenali"})
+        except Exception as e:
+            results.append({"file": f.filename, "status": "error", "reason": str(e)})
+        finally:
+            os.unlink(tmp.name)
+
+    total_ok = sum(1 for r in results if r["status"] == "ok")
+    return jsonify({"batch_id": batch_id, "results": results,
+                    "summary": f"{total_ok}/{len(files)} file berhasil diproses"})
+
+
+# ── API: Control Tower ────────────────────────────────────────────────────────
+@app.route("/api/control-tower")
+def api_ct_list():
+    try:
+        rows = db.fetch_ct_outputs(limit=50)
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/control-tower/<int:ct_id>")
+def api_ct_detail(ct_id):
+    try:
+        row = db.fetch_ct_output_detail(ct_id)
+        if not row: return jsonify({"error": "Not found"}), 404
+        return jsonify(dict(row))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/control-tower/generate", methods=["POST"])
+def api_ct_generate():
+    data    = request.json or {}
+    context = data.get("context", "")
+    use_daily = data.get("use_daily_report", True)
+
+    try:
+        sap_data = db.get_sap_data_for_agent()
+
+        # Cek apakah ada data SAP
+        total_records = (
+            len(sap_data.get("backlog_notifications", [])) +
+            len(sap_data.get("stagnant_wo", [])) +
+            len(sap_data.get("overdue_wo", []))
+        )
+        if total_records == 0:
+            return jsonify({"error": "Belum ada data SAP. Silakan upload file Excel terlebih dahulu."}), 400
+
+        # Ambil daily report terbaru (opsional)
+        daily_content = ""
+        if use_daily:
+            daily_rows = db.fetch_reports(report_type="daily", limit=1)
+            if daily_rows:
+                detail = db.fetch_report_detail(daily_rows[0]["id"])
+                daily_content = detail["content"] if detail else ""
+
+        content = control_tower_agent.generate_control_tower(
+            sap_data, daily_report=daily_content, custom_context=context
+        )
+        now = datetime.now()
+        title = f"Control Tower Report — {now.strftime('%d %b %Y %H:%M')}"
+        ct_id = db.save_ct_output("control_tower", title, content)
+        return jsonify({"id": ct_id, "content": content})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
