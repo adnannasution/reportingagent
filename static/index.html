@@ -1118,20 +1118,15 @@ function renderMarkdown(text) {
 function escT(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 function inlineDecorate(s) {
-  s = s.replace(/\*\*([^*\n]+)\*\*/g,'<strong>$1</strong>');
-  // tag/equipment highlight: 2-4 huruf diikuti angka/slash/dash, min 3 karakter
-  s = s.replace(/\b([A-Z]{1,5}[\-\/]?[A-Z0-9][\-\/\.A-Z0-9]{1,15})\b/g, function(m){
-    var skip = /^(WIB|RU[IVX]*|PAF|WO|ICU|ATG|SPM|SAP|REL|TECO|CLSD|CRTD|OSNO|NOPR|DLL|SOP|PIC|GM|VP|DIR|TAG|dan|dan|atau|yang|pada|untuk|dari|dengan|ini|itu|ada|sudah|belum|tidak|dalam|akan|juga|harus|perlu|sesuai|serta)$/i;
-    if(skip.test(m)||m.length<3) return m;
-    if(/^\d/.test(m)) return m;
-    return '<code style="font-size:.78rem;background:#EEF0FB;color:#4338CA;padding:1px 5px;border-radius:4px;font-family:monospace">'+m+'</code>';
-  });
-  // persentase negatif → merah, positif explicit → hijau
-  s = s.replace(/([+-]?\d+[,\.]\d+%)/g, function(m){
+  if (!s) return '';
+  // **bold**
+  s = s.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+  // Persentase negatif → merah, positif → hijau
+  s = s.replace(/([+-]?\d+[,\.]\d+%)/g, function(m) {
     var n = parseFloat(m.replace(',','.'));
-    if(n<0) return '<span style="color:#DC2626;font-weight:600">'+m+'</span>';
-    if(m[0]==='+') return '<span style="color:#16A34A;font-weight:600">'+m+'</span>';
-    return '<span style="font-weight:500">'+m+'</span>';
+    if (n < 0) return '<span style="color:#DC2626;font-weight:600">' + m + '</span>';
+    if (m[0] === '+') return '<span style="color:#16A34A;font-weight:600">' + m + '</span>';
+    return '<span style="font-weight:500">' + m + '</span>';
   });
   return s;
 }
