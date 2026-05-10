@@ -1115,52 +1115,47 @@ function renderMarkdown(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // Garis pemisah ━━━ atau ---
-  t = t.replace(/^[\u2501\u2500\-=]{3,}$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>');
+  // ## heading → styled header dengan hr bawah
+  t = t.replace(/^#{1,2} (.+)$/gm,
+    '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">$1</h2>');
 
-  // ## / # Heading
-  t = t.replace(/^#{1,2} (.+)$/gm, '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--bg2)">$1</h2>');
+  // ### sub-heading
+  t = t.replace(/^### (.+)$/gm,
+    '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:14px 0 6px">$1</h3>');
 
-  // ### Sub-heading
-  t = t.replace(/^### (.+)$/gm, '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:14px 0 6px">$1</h3>');
+  // **bold**
+  t = t.replace(/\*\*([^*\n]+)\*\*/g,
+    '<strong style="color:var(--ink)">$1</strong>');
 
-  // Bold **text**
-  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--ink)">$1</strong>');
+  // ━━━ / --- / ___ → hr (semua varian garis pemisah)
+  var hrStyle = '<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>';
+  t = t.replace(/^[\u2501\u2500\u2014\u2015]{3,}$/gm, hrStyle);
+  t = t.replace(/^[-_=]{3,}$/gm, hrStyle);
 
-  // Bullet • atau - atau * di awal baris
-  t = t.replace(/^[•\-\*] (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.75;margin-bottom:3px">$1</li>');
+  // bullet • - *
+  t = t.replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>');
+  t = t.replace(/^\d+\. (.+)$/gm, '<li>$2</li>'.replace('$2','$1'));
 
-  // Numbered list
-  t = t.replace(/^\d+\. (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.75;margin-bottom:3px">$1</li>');
-
-  // Wrap <li> dalam <ul>
-  t = t.replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m) {
-    return '<ul style="padding-left:18px;margin:8px 0">' + m + '</ul>';
+  // wrap <li> → <ul>
+  t = t.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, function(m) {
+    return '<ul style="padding-left:18px;margin:6px 0">' + m + '</ul>';
   });
 
-  // [PAUSE] tag
-  t = t.replace(/\[PAUSE\]/g, '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px">PAUSE</span>');
+  // [PAUSE]
+  t = t.replace(/\[PAUSE\]/g,
+    '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px">PAUSE</span>');
 
-  // _italic_ kecil
-  t = t.replace(/_([^_\n]+)_/g, '<span style="font-size:.72rem;color:var(--ink-3);font-style:italic">$1</span>');
+  // _italic kecil_
+  t = t.replace(/_([^_\n]+)_/g,
+    '<em style="font-size:.75rem;color:var(--ink-3)">$1</em>');
 
-  // Legend baris
-  t = t.replace(/^(Legend:.+)$/gm, '<p style="font-size:.72rem;color:var(--ink-3);margin-top:14px;padding:8px 12px;background:var(--bg2);border-radius:6px">$1</p>');
-
-  // Paragraf double newline
-  var pStyle = ' style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:10px"';
-  t = t.replace(/\n\n+/g, '</p><p' + pStyle + '>');
-
-  // Single newline → <br>
+  // paragraf
+  t = t.replace(/\n\n+/g, '</p><p style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:8px">');
   t = t.replace(/\n/g, '<br>');
-
-  // Bungkus awal
-  t = '<p' + pStyle + '>' + t + '</p>';
-
-  // Bersihkan p kosong & p yang membungkus block elements
+  t = '<p style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:8px">' + t + '</p>';
   t = t.replace(/<p[^>]*>\s*<\/p>/g, '');
   t = t.replace(/<p[^>]*>(\s*<(?:h[23]|ul|hr))/g, '$1');
-  t = t.replace(/(<\/(?:h[23]|ul|hr)>)\s*<\/p>/g, '$1');
+  t = t.replace(/(<\/(?:h[23]|ul)>|<hr[^>]*\/>)\s*<\/p>/g, '$1');
 
   return t;
 }
