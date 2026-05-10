@@ -120,7 +120,7 @@ def generate_daily() -> str:
     data_str = json.dumps(data, ensure_ascii=False, default=str, indent=2)
     tgl      = now_wib.strftime("%A, %d %B %Y")
     jam      = now_wib.strftime("%H.%M")
-    prompt = f"""Kamu adalah sistem pelaporan otomatis Daily Executive Brief untuk kilang minyak PRISMA.
+    prompt = f"""Kamu adalah sistem pelaporan otomatis Daily Executive Brief untuk kilang minyak.
 Tanggal: {tgl} | {jam} WIB
 DATA: {data_str}
 Buat Daily Executive Brief dalam Bahasa Indonesia profesional. Sebutkan tag number spesifik. Maksimal 3500 karakter.
@@ -231,7 +231,7 @@ def generate_weekly() -> str:
     trend     = {"recurring": sorted(curr_tags & prev_tags), "new": sorted(curr_tags - prev_tags)}
     data_str  = json.dumps(data, ensure_ascii=False, default=str, indent=2)
     tgl       = now_wib.strftime("%A, %d %B %Y | %H.%M")
-    prompt = f"""Kamu adalah sistem pelaporan Weekly Executive Review untuk kilang minyak PRISMA.
+    prompt = f"""Kamu adalah sistem pelaporan Weekly Executive Review untuk kilang minyak.
 Laporan dibuat: {tgl} WIB
 TREND BAD ACTOR: {json.dumps(trend, ensure_ascii=False)}
 DATA: {data_str}
@@ -326,7 +326,7 @@ def generate_monthly() -> str:
     data     = gather_monthly_data()
     data_str = json.dumps(data, ensure_ascii=False, default=str, indent=2)
     tgl      = now_wib.strftime("%A, %d %B %Y | %H.%M")
-    prompt = f"""Kamu adalah sistem pelaporan Monthly Management Review untuk kilang minyak PRISMA.
+    prompt = f"""Kamu adalah sistem pelaporan Monthly Management Review untuk kilang minyak.
 Laporan dibuat: {tgl} WIB
 DATA: {data_str}
 Buat Monthly Management Review dalam Bahasa Indonesia formal. Sebutkan tag number spesifik. Maksimal 5000 karakter.

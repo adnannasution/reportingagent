@@ -1109,23 +1109,60 @@ async function submitGenerate() {
    Helpers
 ═══════════════════════════════════════════════ */
 function renderMarkdown(text) {
-  // Very lightweight md renderer
-  return text
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^### (.+)$/gm, '<h3 style="font-size:.9rem;font-weight:600;color:var(--ink);margin:14px 0 6px;">$3</h3>'.replace('$3','$1'))
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^\* (.+)$/gm, '<li>$1</li>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/^(\d+)\. (.+)$/gm, '<li>$2</li>')
-    .replace(/(<li>.*<\/li>\n?)+/g, m => `<ul>${m}</ul>`)
-    .replace(/^---$/gm, '<hr/>')
-    .replace(/\[PAUSE\]/g, '<span style="display:inline-block;padding:2px 8px;background:var(--gold-bg);color:var(--gold);font-size:.7rem;font-weight:600;border-radius:4px;margin:0 4px;">PAUSE</span>')
-    .replace(/\n\n+/g, '</p><p>')
-    .replace(/^(?!<[hul]|<hr)(.+)$/gm, (m,p1) => p1 ? p1 : '')
-    .replace(/<p><\/p>/g, '')
-    .replace(/^(.)/m, '<p>$1')
-    + '</p>';
+  if (!text) return '';
+  var t = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
+  // Garis pemisah ━━━ atau ---
+  t = t.replace(/^[\u2501\u2500\-=]{3,}$/gm, '<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>');
+
+  // ## / # Heading
+  t = t.replace(/^#{1,2} (.+)$/gm, '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:20px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--bg2)">$1</h2>');
+
+  // ### Sub-heading
+  t = t.replace(/^### (.+)$/gm, '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:14px 0 6px">$1</h3>');
+
+  // Bold **text**
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong style="color:var(--ink)">$1</strong>');
+
+  // Bullet • atau - atau * di awal baris
+  t = t.replace(/^[•\-\*] (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.75;margin-bottom:3px">$1</li>');
+
+  // Numbered list
+  t = t.replace(/^\d+\. (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.75;margin-bottom:3px">$1</li>');
+
+  // Wrap <li> dalam <ul>
+  t = t.replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m) {
+    return '<ul style="padding-left:18px;margin:8px 0">' + m + '</ul>';
+  });
+
+  // [PAUSE] tag
+  t = t.replace(/\[PAUSE\]/g, '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px">PAUSE</span>');
+
+  // _italic_ kecil
+  t = t.replace(/_([^_\n]+)_/g, '<span style="font-size:.72rem;color:var(--ink-3);font-style:italic">$1</span>');
+
+  // Legend baris
+  t = t.replace(/^(Legend:.+)$/gm, '<p style="font-size:.72rem;color:var(--ink-3);margin-top:14px;padding:8px 12px;background:var(--bg2);border-radius:6px">$1</p>');
+
+  // Paragraf double newline
+  var pStyle = ' style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:10px"';
+  t = t.replace(/\n\n+/g, '</p><p' + pStyle + '>');
+
+  // Single newline → <br>
+  t = t.replace(/\n/g, '<br>');
+
+  // Bungkus awal
+  t = '<p' + pStyle + '>' + t + '</p>';
+
+  // Bersihkan p kosong & p yang membungkus block elements
+  t = t.replace(/<p[^>]*>\s*<\/p>/g, '');
+  t = t.replace(/<p[^>]*>(\s*<(?:h[23]|ul|hr))/g, '$1');
+  t = t.replace(/(<\/(?:h[23]|ul|hr)>)\s*<\/p>/g, '$1');
+
+  return t;
 }
 
 function escHtml(s) {
