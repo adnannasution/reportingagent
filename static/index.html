@@ -1110,59 +1110,103 @@ async function submitGenerate() {
 ═══════════════════════════════════════════════ */
 function renderMarkdown(text) {
   if (!text) return '';
+
   var t = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // ## heading → full-width header dengan border-bottom
-  t = t.replace(/^#{1,2} (.+)$/gm,
-    '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:16px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--border)">$1</h2>');
-
-  // ### sub-heading
-  t = t.replace(/^### (.+)$/gm,
-    '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:12px 0 4px">$1</h3>');
-
-  // **bold**
-  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong style="color:var(--ink)">$1</strong>');
-
-  // ━━━ / --- / ___ → hr full-width
-  var hrHtml = '</p><hr style="border:none;border-top:1px solid var(--border);margin:10px 0;display:block;width:100%"/><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0">';
-  t = t.replace(/^[\u2501\u2500\u2014\u2015]{3,}$/gm, hrHtml);
-  t = t.replace(/^[-_=]{3,}$/gm, hrHtml);
-
-  // bullet • - *
-  t = t.replace(/^[•\-\*] (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin-bottom:4px">$1</li>');
-
-  // numbered list
-  t = t.replace(/^\d+\. (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin-bottom:4px">$1</li>');
-
-  // wrap <li> → <ul>
-  t = t.replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m) {
-    return '</p><ul style="padding-left:18px;margin:6px 0">' + m + '</ul><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0">';
+  // ── 1. HEADINGS ──────────────────────────────────────────
+  t = t.replace(/^#{1,2} (.+)$/gm, function(_, title) {
+    return '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:20px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--border)">' + title + '</h2>';
+  });
+  t = t.replace(/^### (.+)$/gm, function(_, title) {
+    return '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:14px 0 4px">' + title + '</h3>';
   });
 
-  // [PAUSE]
+  // ── 2. HR FULL WIDTH ─────────────────────────────────────
+  var HR = '<hr style="border:none;border-top:1px solid var(--border);margin:12px 0;display:block"/>';
+  t = t.replace(/^[\u2501\u2500\u2014\u2015]{3,}$/gm, HR);
+  t = t.replace(/^[-_=]{3,}$/gm, HR);
+
+  // ── 3. BOLD ───────────────────────────────────────────────
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong style="color:var(--ink)">$1</strong>');
+
+  // ── 4. AUTO BADGE STATUS ─────────────────────────────────
+  // Kata kritis → badge warna otomatis
+  var badges = [
+    [/(🔴\s*)(URGENT|PRIORITAS|KRITIS|CRITICAL|IMMEDIATE)/gi,
+     '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#FEE2E2;color:#B91C1C;font-size:.68rem;font-weight:700;border-radius:4px;text-transform:uppercase;letter-spacing:.04em">$1$2</span>'],
+    [/(🟠\s*)(ACTION|PERLU TINDAKAN)/gi,
+     '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#FFEDD5;color:#C2410C;font-size:.68rem;font-weight:700;border-radius:4px;text-transform:uppercase;letter-spacing:.04em">$1$2</span>'],
+    [/(🟡\s*)(WATCH|PANTAU|WASPADA)/gi,
+     '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#FEF9C3;color:#A16207;font-size:.68rem;font-weight:700;border-radius:4px;text-transform:uppercase;letter-spacing:.04em">$1$2</span>'],
+    [/(🟢\s*)(TERKENDALI|NORMAL|OK|AMAN)/gi,
+     '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#DCFCE7;color:#15803D;font-size:.68rem;font-weight:700;border-radius:4px;text-transform:uppercase;letter-spacing:.04em">$1$2</span>'],
+  ];
+  badges.forEach(function(b) { t = t.replace(b[0], b[1]); });
+
+  // ── 5. AUTO-HIGHLIGHT TAG / EQUIPMENT NUMBER ─────────────
+  // Format: huruf-angka, misal K201, STG 2.2, 37-R-101A, 3C-K-3-02A/00
+  t = t.replace(/\b([A-Z]{1,5}[\s\-]?[\d]{1,4}[A-Z0-9\-\/\.]*)\b/g, function(m) {
+    // Hindari kata biasa seperti WIB, RU, PAF, dll
+    var skip = /^(WIB|RU[IV]*|PAF|WO|ICU|ATG|SPM|SAP|OK|REL|TECO|CLSD|CRTD|OSNO|NOPR|DLL|SOP|PIC|GM|VP|DIR)$/i;
+    if (skip.test(m)) return m;
+    if (m.length < 3) return m;
+    return '<code style="font-family:var(--font-mono,monospace);font-size:.8rem;background:#F1F0FB;color:#4C3D99;padding:1px 5px;border-radius:4px;font-weight:500">' + m + '</code>';
+  });
+
+  // ── 6. PERSENTASE — merah kalau negatif, hijau kalau positif ─
+  t = t.replace(/([-+]?\d+[.,]\d+%)/g, function(m) {
+    var num = parseFloat(m.replace(',','.'));
+    if (num < 0) return '<span style="color:#DC2626;font-weight:600">' + m + '</span>';
+    if (num > 0 && m.indexOf('+') === 0) return '<span style="color:#16A34A;font-weight:600">' + m + '</span>';
+    return '<span style="font-weight:500">' + m + '</span>';
+  });
+
+  // ── 7. SECTION CARD dengan border kiri ───────────────────
+  // Deteksi baris section label (emoji + CAPS di awal baris)
+  t = t.replace(/^(🔴[^\n]+)$/gm,
+    '<div style="border-left:3px solid #EF4444;padding:2px 0 2px 10px;margin:4px 0">$1</div>');
+  t = t.replace(/^(🟠[^\n]+)$/gm,
+    '<div style="border-left:3px solid #F97316;padding:2px 0 2px 10px;margin:4px 0">$1</div>');
+  t = t.replace(/^(🟡[^\n]+)$/gm,
+    '<div style="border-left:3px solid #EAB308;padding:2px 0 2px 10px;margin:4px 0">$1</div>');
+  t = t.replace(/^(🟢[^\n]+)$/gm,
+    '<div style="border-left:3px solid #22C55E;padding:2px 0 2px 10px;margin:4px 0">$1</div>');
+  t = t.replace(/^(🎯[^\n]+|⚙️[^\n]+|📌[^\n]+|🔥[^\n]+)$/gm,
+    '<div style="border-left:3px solid var(--border-2);padding:2px 0 2px 10px;margin:4px 0;font-weight:600;color:var(--ink)">$1</div>');
+
+  // ── 8. BULLET & NUMBERED LIST ────────────────────────────
+  t = t.replace(/^[•\*] (.+)$/gm,
+    '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.65;margin-bottom:5px">$1</li>');
+  t = t.replace(/^- (.+)$/gm,
+    '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.65;margin-bottom:5px">$1</li>');
+  t = t.replace(/^\d+\. (.+)$/gm,
+    '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.65;margin-bottom:5px">$1</li>');
+  t = t.replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m) {
+    return '<ul style="padding-left:18px;margin:6px 0 10px">' + m + '</ul>';
+  });
+
+  // ── 9. [PAUSE] ────────────────────────────────────────────
   t = t.replace(/\[PAUSE\]/g,
-    '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px">PAUSE</span>');
+    '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px;letter-spacing:.05em">⏸ PAUSE</span>');
 
-  // _italic_
-  t = t.replace(/_([^_\n]+)_/g, '<em style="font-size:.75rem;color:var(--ink-3)">$1</em>');
+  // ── 10. _italic_ ─────────────────────────────────────────
+  t = t.replace(/_([^_\n]+)_/g,
+    '<em style="font-size:.75rem;color:var(--ink-3)">$1</em>');
 
-  // paragraf — double newline → baris baru
-  t = t.replace(/\n\n+/g, '</p><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0 0 6px">');
+  // ── 11. PARAGRAF ─────────────────────────────────────────
+  var P = '<p style="font-size:.875rem;color:var(--ink-2);line-height:1.65;margin:0 0 6px">';
+  t = t.replace(/\n\n+/g, '</p>' + P);
+  t = t.replace(/\n/g, '<br>');
+  t = P + t + '</p>';
 
-  // single newline dalam paragraf → <br> (tapi hanya kalau bukan sebelum list/heading)
-  t = t.replace(/\n(?!<)/g, '<br>');
-
-  // bungkus awal
-  t = '<p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0 0 6px">' + t + '</p>';
-
-  // bersihkan p kosong
+  // Bersihkan p kosong & p membungkus block
   t = t.replace(/<p[^>]*>\s*<\/p>/g, '');
-  t = t.replace(/<p[^>]*>(<(?:h[23]|ul|hr|\/ul))/g, '$1');
-  t = t.replace(/(<\/(?:h[23]|ul)>|<hr[^>]*\/>)\s*<\/p>/g, '$1');
-  t = t.replace(/<br>\s*(<(?:h[23]|ul|hr|\/ul|li))/g, '$1');
+  t = t.replace(/<p[^>]*>(\s*<(?:h[23]|ul|hr|div))/g, '$1');
+  t = t.replace(/(<\/(?:h[23]|ul|div)>|<hr[^>]*\/>)\s*<\/p>/g, '$1');
+  t = t.replace(/<br>(\s*<(?:h[23]|ul|hr|div|\/ul|li))/g, '$1');
 
   return t;
 }
