@@ -1115,47 +1115,54 @@ function renderMarkdown(text) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
 
-  // ## heading → styled header dengan hr bawah
+  // ## heading → full-width header dengan border-bottom
   t = t.replace(/^#{1,2} (.+)$/gm,
-    '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:20px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--border)">$1</h2>');
+    '<h2 style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--ink);margin:16px 0 6px;padding-bottom:5px;border-bottom:1px solid var(--border)">$1</h2>');
 
   // ### sub-heading
   t = t.replace(/^### (.+)$/gm,
-    '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:14px 0 6px">$1</h3>');
+    '<h3 style="font-size:.875rem;font-weight:700;color:var(--ink-2);margin:12px 0 4px">$1</h3>');
 
   // **bold**
-  t = t.replace(/\*\*([^*\n]+)\*\*/g,
-    '<strong style="color:var(--ink)">$1</strong>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<strong style="color:var(--ink)">$1</strong>');
 
-  // ━━━ / --- / ___ → hr (semua varian garis pemisah)
-  var hrStyle = '<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>';
-  t = t.replace(/^[\u2501\u2500\u2014\u2015]{3,}$/gm, hrStyle);
-  t = t.replace(/^[-_=]{3,}$/gm, hrStyle);
+  // ━━━ / --- / ___ → hr full-width
+  var hrHtml = '</p><hr style="border:none;border-top:1px solid var(--border);margin:10px 0;display:block;width:100%"/><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0">';
+  t = t.replace(/^[\u2501\u2500\u2014\u2015]{3,}$/gm, hrHtml);
+  t = t.replace(/^[-_=]{3,}$/gm, hrHtml);
 
   // bullet • - *
-  t = t.replace(/^[•\-\*] (.+)$/gm, '<li>$1</li>');
-  t = t.replace(/^\d+\. (.+)$/gm, '<li>$2</li>'.replace('$2','$1'));
+  t = t.replace(/^[•\-\*] (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin-bottom:4px">$1</li>');
+
+  // numbered list
+  t = t.replace(/^\d+\. (.+)$/gm, '<li style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin-bottom:4px">$1</li>');
 
   // wrap <li> → <ul>
-  t = t.replace(/(<li>[\s\S]*?<\/li>\n?)+/g, function(m) {
-    return '<ul style="padding-left:18px;margin:6px 0">' + m + '</ul>';
+  t = t.replace(/(<li[^>]*>[\s\S]*?<\/li>\n?)+/g, function(m) {
+    return '</p><ul style="padding-left:18px;margin:6px 0">' + m + '</ul><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0">';
   });
 
   // [PAUSE]
   t = t.replace(/\[PAUSE\]/g,
     '<span style="display:inline-block;padding:2px 8px;background:var(--bg2);color:var(--ink-3);font-size:.68rem;font-weight:700;border-radius:4px;margin:0 4px">PAUSE</span>');
 
-  // _italic kecil_
-  t = t.replace(/_([^_\n]+)_/g,
-    '<em style="font-size:.75rem;color:var(--ink-3)">$1</em>');
+  // _italic_
+  t = t.replace(/_([^_\n]+)_/g, '<em style="font-size:.75rem;color:var(--ink-3)">$1</em>');
 
-  // paragraf
-  t = t.replace(/\n\n+/g, '</p><p style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:8px">');
-  t = t.replace(/\n/g, '<br>');
-  t = '<p style="font-size:.875rem;color:var(--ink-2);line-height:1.8;margin-bottom:8px">' + t + '</p>';
+  // paragraf — double newline → baris baru
+  t = t.replace(/\n\n+/g, '</p><p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0 0 6px">');
+
+  // single newline dalam paragraf → <br> (tapi hanya kalau bukan sebelum list/heading)
+  t = t.replace(/\n(?!<)/g, '<br>');
+
+  // bungkus awal
+  t = '<p style="font-size:.875rem;color:var(--ink-2);line-height:1.6;margin:0 0 6px">' + t + '</p>';
+
+  // bersihkan p kosong
   t = t.replace(/<p[^>]*>\s*<\/p>/g, '');
-  t = t.replace(/<p[^>]*>(\s*<(?:h[23]|ul|hr))/g, '$1');
+  t = t.replace(/<p[^>]*>(<(?:h[23]|ul|hr|\/ul))/g, '$1');
   t = t.replace(/(<\/(?:h[23]|ul)>|<hr[^>]*\/>)\s*<\/p>/g, '$1');
+  t = t.replace(/<br>\s*(<(?:h[23]|ul|hr|\/ul|li))/g, '$1');
 
   return t;
 }
