@@ -7,6 +7,7 @@ from datetime import datetime
 from flask import Flask, send_from_directory, request, jsonify
 from dotenv import load_dotenv
 import db, agent, report_generator, sap_parser, control_tower_agent
+from analytics_routes import analytics_bp  
 
 load_dotenv()
 
@@ -15,6 +16,7 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
+app.register_blueprint(analytics_bp)  
 
 try:
     db.run_migrations()
@@ -26,6 +28,10 @@ except Exception as e:
 @app.route("/")
 def index():
     return send_from_directory(STATIC_DIR, "index.html")
+
+@app.route('/analytics')
+def analytics_page():
+    return send_from_directory(STATIC_DIR, 'analytics.html')  # pakai STATIC_DIR
 
 @app.route("/health")
 def health():
