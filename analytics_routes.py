@@ -8,6 +8,7 @@ Endpoints:
 import math
 from flask import Blueprint, request, jsonify
 from db import db_cursor
+from datetime import timedelta  # ← tambah di baris import
 
 analytics_bp = Blueprint("analytics", __name__)
 
@@ -214,6 +215,8 @@ def analytics_detail():
                 for k, v in r.items():
                     if v is None:
                         r[k] = "—"
+                    elif isinstance(v, timedelta):   # ← tambah baris ini
+                        r[k] = v.days                # ← dan ini
                     elif hasattr(v, "isoformat"):
                         r[k] = v.isoformat()
                     elif hasattr(v, "__float__"):
