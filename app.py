@@ -34,21 +34,7 @@ def analytics_page():
     return send_from_directory(STATIC_DIR, 'analytics.html')  # pakai STATIC_DIR
 
 
-@analytics_bp.route("/api/analytics/debug-wo")
-def debug_wo():
-    with db_cursor() as cur:
-        cur.execute("""
-            SELECT system_status, user_status, order_type 
-            FROM sap_work_orders LIMIT 5
-        """)
-        rows = []
-        for r in cur.fetchall():
-            row = dict(r)
-            for k, v in row.items():
-                if hasattr(v, 'isoformat'):
-                    row[k] = v.isoformat()
-            rows.append(row)
-        return jsonify(rows)
+
 
 @app.route("/health")
 def health():
