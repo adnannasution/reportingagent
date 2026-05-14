@@ -35,7 +35,7 @@ def debug_wo():
             rows.append(row)
         return jsonify(rows)
 
-        
+
 @analytics_bp.route("/api/analytics/charts")
 def get_charts():
     try:
@@ -202,8 +202,10 @@ def get_charts():
 
             return jsonify(results)
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+except Exception as e:
+    import traceback
+    print(f"[ANALYTICS ERROR] {source=} {traceback.format_exc()}")
+    return jsonify({"error": str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
