@@ -357,7 +357,7 @@ def _build_detail_query(source, args):
                 "w.basic_fin_date,w.main_workctr "
                 "FROM sap_notifications n "
                 "JOIN sap_work_orders w ON n.order_no=w.order_no "
-                "WHERE w.system_status ILIKE '%REL%' "
+                "WHERE w.system_status ILIKE '%%REL%%' "
                 "ORDER BY w.basic_fin_date ASC NULLS LAST",
                 (),
                 [
@@ -385,7 +385,7 @@ def _build_detail_query(source, args):
                 "w.actual_finish,w.main_workctr "
                 "FROM sap_notifications n "
                 "JOIN sap_work_orders w ON n.order_no=w.order_no "
-                "WHERE w.system_status ILIKE '%TECO%' OR w.system_status ILIKE '%CLSD%' "
+                "WHERE w.system_status ILIKE '%%TECO%%' OR w.system_status ILIKE '%%CLSD%%' "
                 "ORDER BY w.actual_finish DESC NULLS LAST",
                 (),
                 [
@@ -440,9 +440,9 @@ def _build_detail_query(source, args):
         wo_cat = args.get("wo_cat", "no_wo")
         cat_where = {
             "no_wo": "(n.order_no IS NULL OR n.order_no='')",
-            "crtd":  "w.system_status ILIKE '%CRTD%' AND w.system_status NOT ILIKE '%REL%'",
-            "rel":   "w.system_status ILIKE '%REL%'",
-            "teco":  "(w.system_status ILIKE '%TECO%' OR w.system_status ILIKE '%CLSD%')",
+            "crtd":  "w.system_status ILIKE '%%CRTD%%' AND w.system_status NOT ILIKE '%%REL%%'",
+            "rel":   "w.system_status ILIKE '%%REL%%'",
+            "teco":  "(w.system_status ILIKE '%%TECO%%' OR w.system_status ILIKE '%%CLSD%%')",
         }.get(wo_cat, "(n.order_no IS NULL OR n.order_no='')")
         return (
             f"SELECT n.notification,n.notif_type,n.system_status,n.criticality,"
@@ -509,7 +509,7 @@ def _build_detail_query(source, args):
                 "basic_fin_date,actual_finish,main_workctr "
                 "FROM sap_work_orders "
                 "WHERE TO_CHAR(actual_finish,'YYYY-MM')=%s "
-                "  AND (system_status ILIKE '%TECO%' OR system_status ILIKE '%CLSD%') "
+                "  AND (system_status ILIKE '%%TECO%%' OR system_status ILIKE '%%CLSD%%') "
                 "ORDER BY actual_finish DESC",
                 (month,), WO_COLS, f"WO selesai {month}",
             )
@@ -519,11 +519,11 @@ def _build_detail_query(source, args):
         order_type = args.get("order_type", "PT02")
         status     = args.get("status", "rel").lower()
         status_where = {
-            "crtd": "system_status ILIKE '%CRTD%' AND system_status NOT ILIKE '%REL%'",
-            "rel":  "system_status ILIKE '%REL%'",
-            "teco": "system_status ILIKE '%TECO%'",
-            "clsd": "system_status ILIKE '%CLSD%'",
-        }.get(status, "system_status ILIKE '%REL%'")
+            "crtd": "system_status ILIKE '%%CRTD%%' AND system_status NOT ILIKE '%%REL%%'",
+            "rel":  "system_status ILIKE '%%REL%%'",
+            "teco": "system_status ILIKE '%%TECO%%'",
+            "clsd": "system_status ILIKE '%%CLSD%%'",
+        }.get(status, "system_status ILIKE '%%REL%%'")
         return (
             f"SELECT order_no,order_type,system_status,criticality,"
             f"LEFT(description,80) AS description,equipment,location,"
@@ -573,8 +573,8 @@ def _build_detail_query(source, args):
             f"main_workctr "
             f"FROM sap_work_orders "
             f"WHERE basic_fin_date < CURRENT_DATE "
-            f"  AND system_status NOT ILIKE '%TECO%' "
-            f"  AND system_status NOT ILIKE '%CLSD%' "
+            f"  AND system_status NOT ILIKE '%%TECO%%' "
+            f"  AND system_status NOT ILIKE '%%CLSD%%' "
             f"  AND {bw} "
             f"ORDER BY days_overdue DESC",
             (),
