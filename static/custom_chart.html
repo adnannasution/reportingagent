@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Custom Chart Builder — Executive Governance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#FAF8F4;--white:#FFFFFF;--ink:#1C1917;--ink-2:#44403C;--ink-3:#78716C;
+  --border:#E7E5E1;--border-2:#D6D3CE;
+  --red:#C0392B;--red-bg:#FEF2F0;--amber:#B45309;--amber-bg:#FFFBEB;
+  --green:#166534;--green-bg:#F0FDF4;--blue:#1E3A5F;--blue-bg:#EFF6FF;
+  --shadow-sm:0 1px 3px rgba(28,25,23,.07);
+  --shadow:0 4px 12px rgba(28,25,23,.08);
+  --shadow-lg:0 16px 40px rgba(28,25,23,.10);
+  --radius:10px;
+  --font-display:'Playfair Display',Georgia,serif;
+  --font-body:'DM Sans',system-ui,sans-serif;
+  --font-mono:'DM Mono',monospace;
+}
+html{font-size:15px}
+body{font-family:var(--font-body);background:var(--cream);color:var(--ink);min-height:100vh}
+.app{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{width:240px;flex-shrink:0;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;height:100vh;top:0;left:0;z-index:100;box-shadow:var(--shadow-sm)}
+.sidebar-logo{padding:24px 20px 18px;border-bottom:1px solid var(--border)}
+.sidebar-logo .wordmark{font-family:var(--font-display);font-size:1.15rem;color:var(--ink);line-height:1.2}
+.sidebar-logo .wordmark span{display:block;font-family:var(--font-body);font-size:.7rem;font-weight:500;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase;margin-top:2px}
+.nav{flex:1;padding:12px 10px;overflow-y:auto}
+.nav-section{margin-bottom:20px}
+.nav-section-label{font-size:.63rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);padding:0 10px;margin-bottom:4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:7px;font-size:.875rem;color:var(--ink-2);transition:background .15s;border:none;background:none;width:100%;text-align:left;text-decoration:none;cursor:pointer}
+.nav-item .icon{font-size:1rem;width:20px;text-align:center;flex-shrink:0}
+.nav-item:hover{background:var(--cream);color:var(--ink)}
+.nav-item.active{background:var(--ink);color:var(--white);font-weight:500}
+.sidebar-footer{padding:14px 20px;border-top:1px solid var(--border);font-size:.72rem;color:var(--ink-3)}
+.sidebar-footer strong{color:var(--ink-2);font-weight:500;display:block;margin-bottom:2px}
+
+/* Main */
+.main{margin-left:240px;flex:1;display:flex;flex-direction:column;min-height:100vh}
+.topbar{position:sticky;top:0;background:rgba(250,248,244,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;z-index:50}
+.topbar-title{font-family:var(--font-display);font-size:1.25rem;color:var(--ink)}
+.topbar-date{font-size:.78rem;color:var(--ink-3);font-family:var(--font-mono)}
+.content{padding:28px 32px;flex:1}
+
+/* Layout: builder kiri, chart kanan */
+.builder-layout{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start}
+
+/* Builder panel */
+.builder-panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);overflow:hidden;position:sticky;top:80px}
+.builder-panel-header{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--ink)}
+.builder-panel-header h3{font-family:var(--font-display);font-size:1rem;color:var(--white)}
+.builder-panel-header p{font-size:.72rem;color:rgba(255,255,255,.6);margin-top:3px}
+.builder-body{padding:18px 20px}
+
+/* Form groups */
+.fg{margin-bottom:16px}
+.fg:last-child{margin-bottom:0}
+.fg label{display:block;font-size:.72rem;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.fg select,.fg input[type=text]{
+  width:100%;padding:8px 10px;
+  border:1px solid var(--border);border-radius:7px;
+  font-family:var(--font-body);font-size:.85rem;color:var(--ink);
+  background:var(--cream);outline:none;transition:border .15s;
+  appearance:none;
+}
+.fg select:focus,.fg input:focus{border-color:var(--ink);background:var(--white)}
+.fg .hint{font-size:.7rem;color:var(--ink-3);margin-top:4px}
+
+/* Section divider */
+.section-divider{border:none;border-top:1px solid var(--border);margin:16px 0}
+
+/* Filter rows */
+.filter-list{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.filter-row{display:grid;grid-template-columns:1fr 1fr auto;gap:6px;align-items:center}
+.filter-row select,.filter-row input{padding:6px 8px;font-size:.78rem;border:1px solid var(--border);border-radius:6px;font-family:var(--font-body);color:var(--ink);background:var(--cream);outline:none}
+.filter-row input{width:100%}
+.filter-remove{width:26px;height:26px;border:1px solid var(--border);border-radius:5px;background:var(--white);cursor:pointer;color:var(--ink-3);font-size:.75rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s}
+.filter-remove:hover{background:var(--red-bg);color:var(--red);border-color:var(--red)}
+.add-filter-btn{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink-3);cursor:pointer;border:1px dashed var(--border-2);border-radius:6px;padding:6px 10px;background:none;width:100%;transition:all .15s;font-family:var(--font-body)}
+.add-filter-btn:hover{border-color:var(--ink-2);color:var(--ink);background:var(--cream)}
+
+/* Chart type pills */
+.chart-type-group{display:flex;gap:6px;flex-wrap:wrap}
+.ct-btn{padding:6px 12px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;color:var(--ink-2);background:var(--white);cursor:pointer;transition:all .15s;font-family:var(--font-body);display:flex;align-items:center;gap:5px}
+.ct-btn:hover{border-color:var(--border-2);background:var(--cream)}
+.ct-btn.active{background:var(--ink);color:var(--white);border-color:var(--ink)}
+
+/* Top N */
+.top-n-group{display:flex;gap:6px}
+.top-n-btn{flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;color:var(--ink-2);background:var(--white);cursor:pointer;transition:all .15s;font-family:var(--font-body);text-align:center}
+.top-n-btn.active{background:var(--ink);color:var(--white);border-color:var(--ink)}
+
+/* Generate button */
+.generate-btn{width:100%;padding:11px;border:none;border-radius:8px;background:var(--ink);color:var(--white);font-family:var(--font-display);font-size:1rem;cursor:pointer;transition:all .15s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+.generate-btn:hover{background:var(--ink-2)}
+.generate-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* Chart panel */
+.chart-panel{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);min-height:480px;display:flex;flex-direction:column;overflow:hidden}
+.chart-panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chart-panel-header h3{font-family:var(--font-display);font-size:1rem;color:var(--ink)}
+.chart-panel-header .meta{font-size:.72rem;color:var(--ink-3);font-family:var(--font-mono)}
+.chart-panel-body{flex:1;padding:24px;display:flex;align-items:center;justify-content:center}
+.chart-canvas-wrap{width:100%;position:relative}
+
+/* Legend */
+.legend-wrap{display:flex;flex-wrap:wrap;gap:8px;padding:0 20px 16px;border-top:1px solid var(--border);margin-top:auto}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--ink-2)}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+/* Empty state */
+.empty-state{text-align:center;padding:60px 20px;color:var(--ink-3)}
+.empty-state .big-icon{font-size:3.5rem;margin-bottom:16px;opacity:.4}
+.empty-state h4{font-family:var(--font-display);font-size:1.1rem;color:var(--ink-2);margin-bottom:8px}
+.empty-state p{font-size:.82rem;line-height:1.6;max-width:300px;margin:0 auto}
+
+/* Error state */
+.error-state{background:var(--red-bg);border:1px solid #FCA5A5;border-radius:8px;padding:16px 18px;margin:20px;color:var(--red);font-size:.82rem}
+
+/* Loading */
+.loading-state{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 20px;color:var(--ink-3)}
+.spinner-lg{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--ink-2);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Stats bar */
+.stats-bar{display:flex;gap:16px;padding:12px 20px;border-top:1px solid var(--border);background:var(--cream);flex-shrink:0}
+.stat-item{font-size:.72rem;color:var(--ink-3)}
+.stat-item strong{color:var(--ink-2);font-weight:600}
+
+/* Btn small */
+.btn-sm{padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:var(--white);font-size:.75rem;color:var(--ink-2);cursor:pointer;transition:all .12s;font-family:var(--font-body)}
+.btn-sm:hover{border-color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="wordmark">Executive<br>Governance<span>Refinery Operations</span></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-section">
+        <div class="nav-section-label">Reports</div>
+        <a class="nav-item" href="/"><span class="icon">📅</span> Daily Report</a>
+        <a class="nav-item" href="/"><span class="icon">📘</span> Weekly Review</a>
+        <a class="nav-item" href="/"><span class="icon">📙</span> Monthly Pack</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Control Tower</div>
+        <a class="nav-item" href="/"><span class="icon">🗼</span> Control Tower</a>
+        <a class="nav-item" href="/"><span class="icon">📤</span> Upload SAP Data</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Analytics</div>
+        <a class="nav-item" href="/analytics"><span class="icon">📊</span> SAP Analytics</a>
+        <a class="nav-item active" href="/custom-chart"><span class="icon">🎨</span> Custom Chart</a>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">Executive</div>
+        <a class="nav-item" href="/"><span class="icon">📝</span> Memo / Nota Dinas</a>
+        <a class="nav-item" href="/"><span class="icon">🎯</span> Talking Points</a>
+      </div>
+    </nav>
+    <div class="sidebar-footer"><strong>Executive Dashboard</strong>Pertamina Refinery Operations</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-title">Custom Chart Builder</span>
+      <span class="topbar-date" id="topbar-date"></span>
+    </div>
+
+    <div class="content">
+      <div class="builder-layout">
+
+        <!-- ── Builder Panel ─────────────────────── -->
+        <div class="builder-panel">
+          <div class="builder-panel-header">
+            <h3>Konfigurasi Chart</h3>
+            <p>Pilih data, agregasi, dan tampilan</p>
+          </div>
+          <div class="builder-body">
+
+            <!-- Sumber data -->
+            <div class="fg">
+              <label>Sumber Data</label>
+              <select id="sel-table" onchange="onTableChange()">
+                <option value="notifications">SAP Notifikasi (IW29)</option>
+                <option value="work_orders">SAP Work Order (IW39)</option>
+              </select>
+            </div>
+
+            <hr class="section-divider"/>
+
+            <!-- X axis -->
+            <div class="fg">
+              <label>X Axis — Dimensi Utama</label>
+              <select id="sel-x"></select>
+              <div class="hint">Kolom yang jadi sumbu horizontal / label kategori</div>
+            </div>
+
+            <!-- Aggregasi / Y -->
+            <div class="fg">
+              <label>Y Axis — Nilai (Agregasi)</label>
+              <select id="sel-agg"></select>
+            </div>
+
+            <!-- Group by / Legend -->
+            <div class="fg">
+              <label>Group By / Legend <span style="font-weight:400;color:var(--ink-3)">(opsional)</span></label>
+              <select id="sel-group">
+                <option value="">— Tanpa legend —</option>
+              </select>
+              <div class="hint">Warna berbeda per nilai kolom ini</div>
+            </div>
+
+            <hr class="section-divider"/>
+
+            <!-- Filter -->
+            <div class="fg">
+              <label>Filter <span style="font-weight:400;color:var(--ink-3)">(opsional)</span></label>
+              <div class="filter-list" id="filter-list"></div>
+              <button class="add-filter-btn" onclick="addFilter()">+ Tambah filter</button>
+            </div>
+
+            <hr class="section-divider"/>
+
+            <!-- Tipe chart -->
+            <div class="fg">
+              <label>Tipe Chart</label>
+              <div class="chart-type-group">
+                <button class="ct-btn active" data-ct="bar"  onclick="setChartType('bar')">📊 Bar</button>
+                <button class="ct-btn"        data-ct="barh" onclick="setChartType('barh')">📉 Horizontal</button>
+                <button class="ct-btn"        data-ct="line" onclick="setChartType('line')">📈 Line</button>
+                <button class="ct-btn"        data-ct="pie"  onclick="setChartType('pie')">🥧 Pie</button>
+                <button class="ct-btn"        data-ct="doughnut" onclick="setChartType('doughnut')">⭕ Donut</button>
+              </div>
+            </div>
+
+            <!-- Top N -->
+            <div class="fg" id="fg-topn">
+              <label>Top N Hasil</label>
+              <div class="top-n-group">
+                <button class="top-n-btn" data-n="10"  onclick="setTopN(10)">10</button>
+                <button class="top-n-btn active" data-n="20" onclick="setTopN(20)">20</button>
+                <button class="top-n-btn" data-n="30" onclick="setTopN(30)">30</button>
+                <button class="top-n-btn" data-n="50" onclick="setTopN(50)">50</button>
+              </div>
+              <div class="hint">Hanya berlaku jika tanpa Group By</div>
+            </div>
+
+            <!-- Generate -->
+            <button class="generate-btn" id="gen-btn" onclick="generate()">
+              <span id="gen-btn-icon">▶</span>
+              <span id="gen-btn-text">Generate Chart</span>
+            </button>
+
+          </div>
+        </div>
+
+        <!-- ── Chart Panel ────────────────────────── -->
+        <div class="chart-panel" id="chart-panel">
+          <div class="chart-panel-header">
+            <h3 id="chart-title">Chart</h3>
+            <span class="meta" id="chart-meta"></span>
+          </div>
+          <div class="chart-panel-body" id="chart-body">
+            <div class="empty-state">
+              <div class="big-icon">🎨</div>
+              <h4>Buat chart pertamamu</h4>
+              <p>Pilih sumber data, dimensi, dan agregasi di panel kiri, lalu klik Generate Chart.</p>
+            </div>
+          </div>
+          <div id="legend-wrap" class="legend-wrap" style="display:none"></div>
+          <div id="stats-bar" class="stats-bar" style="display:none">
+            <div class="stat-item">Tabel: <strong id="s-table">—</strong></div>
+            <div class="stat-item">X: <strong id="s-x">—</strong></div>
+            <div class="stat-item">Y: <strong id="s-agg">—</strong></div>
+            <div class="stat-item">Data points: <strong id="s-pts">—</strong></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+/* ═══════════════════════════════════════════
+   State
+═══════════════════════════════════════════ */
+let config     = {};
+let chartInst  = null;
+let chartType  = 'bar';
+let topN       = 20;
+let filterIdx  = 0;
+
+const PALETTE = [
+  '#1C1917','#378ADD','#E24B4A','#1D9E75','#BA7517',
+  '#639922','#5B21B6','#0C447C','#B45309','#166534',
+  '#185FA5','#C0392B','#B4B2A9','#888780','#44403C',
+];
+
+/* ═══════════════════════════════════════════
+   Init
+═══════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', async () => {
+  document.getElementById('topbar-date').textContent =
+    new Date().toLocaleDateString('id-ID', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  await loadConfig();
+  onTableChange();
+});
+
+async function loadConfig() {
+  try {
+    const res = await fetch('/api/custom/config');
+    config = await res.json();
+  } catch(e) {
+    console.error('Config load error:', e);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Table change → rebuild dropdowns
+═══════════════════════════════════════════ */
+function onTableChange() {
+  const tbl = document.getElementById('sel-table').value;
+  if (!config[tbl]) return;
+
+  const cfg = config[tbl];
+
+  // X axis
+  const selX = document.getElementById('sel-x');
+  selX.innerHTML = cfg.x_cols.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+
+  // Aggregation
+  const selAgg = document.getElementById('sel-agg');
+  selAgg.innerHTML = cfg.aggregations.map(a => `<option value="${a.key}">${a.label}</option>`).join('');
+
+  // Group by
+  const selG = document.getElementById('sel-group');
+  selG.innerHTML = '<option value="">— Tanpa legend —</option>' +
+    cfg.x_cols.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+
+  // Clear filters
+  document.getElementById('filter-list').innerHTML = '';
+  filterIdx = 0;
+}
+
+/* ═══════════════════════════════════════════
+   Filters
+═══════════════════════════════════════════ */
+function addFilter() {
+  const tbl = document.getElementById('sel-table').value;
+  if (!config[tbl]) return;
+  const cols = config[tbl].filter_cols;
+  const id   = ++filterIdx;
+
+  const div = document.createElement('div');
+  div.className = 'filter-row';
+  div.id = `fr-${id}`;
+  div.innerHTML = `
+    <select id="fc-${id}" onchange="onFilterColChange(${id})">
+      ${cols.map(c=>`<option value="${c.key}">${c.label}</option>`).join('')}
+    </select>
+    <input type="text" id="fv-${id}" placeholder="Nilai..." list="fl-${id}"/>
+    <datalist id="fl-${id}"></datalist>
+    <button class="filter-remove" onclick="removeFilter(${id})" title="Hapus">✕</button>`;
+  document.getElementById('filter-list').appendChild(div);
+  onFilterColChange(id);
+}
+
+async function onFilterColChange(id) {
+  const tbl = document.getElementById('sel-table').value;
+  const col = document.getElementById(`fc-${id}`)?.value;
+  if (!col) return;
+
+  const dl = document.getElementById(`fl-${id}`);
+  dl.innerHTML = '';
+  try {
+    const res = await fetch(`/api/custom/filter-values?table=${tbl}&col=${col}`);
+    const vals = await res.json();
+    if (Array.isArray(vals)) {
+      dl.innerHTML = vals.map(v => `<option value="${v}">`).join('');
+    }
+  } catch(e) {}
+}
+
+function removeFilter(id) {
+  document.getElementById(`fr-${id}`)?.remove();
+}
+
+/* ═══════════════════════════════════════════
+   Chart type & top N
+═══════════════════════════════════════════ */
+function setChartType(ct) {
+  chartType = ct;
+  document.querySelectorAll('.ct-btn').forEach(b => b.classList.toggle('active', b.dataset.ct === ct));
+  document.getElementById('fg-topn').style.display = ct === 'pie' || ct === 'doughnut' ? 'block' : 'block';
+}
+
+function setTopN(n) {
+  topN = n;
+  document.querySelectorAll('.top-n-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.n) === n));
+}
+
+/* ═══════════════════════════════════════════
+   Generate
+═══════════════════════════════════════════ */
+async function generate() {
+  const tbl      = document.getElementById('sel-table').value;
+  const x_col    = document.getElementById('sel-x').value;
+  const agg      = document.getElementById('sel-agg').value;
+  const group    = document.getElementById('sel-group').value || null;
+
+  // Collect filters
+  const filters = [];
+  document.querySelectorAll('.filter-row').forEach(row => {
+    const id  = row.id.replace('fr-','');
+    const col = document.getElementById(`fc-${id}`)?.value;
+    const val = document.getElementById(`fv-${id}`)?.value?.trim();
+    if (col && val) filters.push({col, val});
+  });
+
+  // UI loading
+  const btn   = document.getElementById('gen-btn');
+  const btnTx = document.getElementById('gen-btn-text');
+  const btnIc = document.getElementById('gen-btn-icon');
+  btn.disabled = true;
+  btnIc.innerHTML = '<div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;display:inline-block"></div>';
+  btnTx.textContent = 'Generating...';
+
+  showLoading();
+
+  try {
+    const res  = await fetch('/api/custom/chart', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({table: tbl, x_col, agg, group_col: group, filters, top_n: topN}),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showError(data.error || 'Generate gagal');
+      return;
+    }
+
+    renderChart(data, tbl, x_col, agg);
+
+  } catch(e) {
+    showError('Network error: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btnIc.textContent = '▶';
+    btnTx.textContent = 'Generate Chart';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   Chart rendering
+═══════════════════════════════════════════ */
+function renderChart(data, tbl, x_col, agg_key) {
+  if (chartInst) { chartInst.destroy(); chartInst = null; }
+
+  const body = document.getElementById('chart-body');
+  body.innerHTML = '<div class="chart-canvas-wrap"><canvas id="the-chart"></canvas></div>';
+
+  const cfg_tbl = config[tbl];
+  const x_lbl   = cfg_tbl.x_cols.find(c=>c.key===x_col)?.label || x_col;
+  const agg_lbl  = data.y_label || agg_key;
+
+  // Title
+  const groupLbl = data.group_label ? ` × ${data.group_label}` : '';
+  document.getElementById('chart-title').textContent = `${agg_lbl} per ${x_lbl}${groupLbl}`;
+  document.getElementById('chart-meta').textContent  = `${data.total_rows} kombinasi data`;
+
+  // Datasets with colors
+  const datasets = data.datasets.map((ds, i) => {
+    const color = PALETTE[i % PALETTE.length];
+    const base  = {
+      label: ds.label,
+      data:  ds.data,
+    };
+    if (chartType === 'pie' || chartType === 'doughnut') {
+      return {...base, backgroundColor: PALETTE.slice(0, ds.data.length), borderWidth:0, hoverOffset:6};
+    }
+    if (chartType === 'line') {
+      return {...base, borderColor:color, backgroundColor:color+'22', tension:.35, fill:true, pointRadius:4, borderWidth:2};
+    }
+    return {...base, backgroundColor:color, borderRadius:3, borderSkipped:false};
+  });
+
+  const isHoriz   = chartType === 'barh';
+  const cjsType   = chartType === 'barh' ? 'bar' : chartType;
+  const G = 'rgba(28,25,23,0.06)', T = '#78716C';
+
+  const scaleOpts = () => ({
+    grid: {color: G},
+    ticks: {color: T, font: {size: 11}},
+  });
+
+  let options = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {display: false},
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: ${Number(ctx.parsed.y ?? ctx.parsed).toLocaleString('id-ID')}`,
+        }
+      }
+    },
+  };
+
+  if (chartType === 'pie' || chartType === 'doughnut') {
+    options.cutout = chartType === 'doughnut' ? '55%' : 0;
+    options.plugins.legend = {display: false};
+  } else if (isHoriz) {
+    options.indexAxis = 'y';
+    options.scales = {x: scaleOpts(), y: scaleOpts()};
+  } else {
+    options.scales = {x: scaleOpts(), y: scaleOpts()};
+    if (data.grouped) {
+      options.scales.x.stacked = false;
+      options.scales.y.stacked = false;
+    }
+  }
+
+  // Height: more labels = taller
+  const h = Math.max(300, Math.min(600, data.labels.length * (isHoriz ? 28 : 40)));
+  document.querySelector('.chart-canvas-wrap').style.height = h + 'px';
+
+  chartInst = new Chart(document.getElementById('the-chart'), {
+    type: cjsType,
+    data: {labels: data.labels, datasets},
+    options,
+  });
+
+  // Legend
+  renderLegend(data.datasets, tbl, x_col, agg_key);
+
+  // Stats bar
+  document.getElementById('s-table').textContent  = cfg_tbl.label;
+  document.getElementById('s-x').textContent      = x_lbl;
+  document.getElementById('s-agg').textContent    = agg_lbl;
+  document.getElementById('s-pts').textContent    = data.labels.length;
+  document.getElementById('stats-bar').style.display = 'flex';
+}
+
+function renderLegend(datasets, tbl, x_col, agg_key) {
+  const wrap = document.getElementById('legend-wrap');
+  if (datasets.length <= 1 && chartType !== 'pie' && chartType !== 'doughnut') {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  if (chartType === 'pie' || chartType === 'doughnut') {
+    // legend = labels (from chart instance)
+    const labels = chartInst.data.labels;
+    wrap.innerHTML = labels.map((l,i) =>
+      `<div class="legend-item"><div class="legend-dot" style="background:${PALETTE[i%PALETTE.length]}"></div>${l}</div>`
+    ).join('');
+  } else {
+    wrap.innerHTML = datasets.map((ds,i) =>
+      `<div class="legend-item"><div class="legend-dot" style="background:${PALETTE[i%PALETTE.length]}"></div>${ds.label}</div>`
+    ).join('');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   State helpers
+═══════════════════════════════════════════ */
+function showLoading() {
+  document.getElementById('chart-body').innerHTML = `
+    <div class="loading-state">
+      <div class="spinner-lg"></div>
+      <span>Memproses data...</span>
+    </div>`;
+  document.getElementById('legend-wrap').style.display = 'none';
+  document.getElementById('stats-bar').style.display = 'none';
+}
+
+function showError(msg) {
+  document.getElementById('chart-body').innerHTML =
+    `<div class="error-state">⚠️ ${esc(msg)}</div>`;
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>
