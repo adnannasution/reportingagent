@@ -188,7 +188,7 @@ def api_sap_upload():
     has_bom   = False
 
     for f in files:
-        if not f.filename.endswith('.xlsx'):
+        if not f.filename.lower().endswith('.xlsx'):
             results.append({"file": f.filename, "status": "skip", "reason": "Bukan file .xlsx"})
             continue
         tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
