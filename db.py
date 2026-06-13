@@ -132,6 +132,45 @@ def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_sap_wo_type ON sap_work_orders(order_type);",
         "CREATE INDEX IF NOT EXISTS idx_sap_wo_batch ON sap_work_orders(upload_batch);",
 
+        # ── SAP BOM (Bill of Materials) ───────────────────────────
+        """
+        CREATE TABLE IF NOT EXISTS sap_bom (
+            id               SERIAL PRIMARY KEY,
+            equipment        VARCHAR(50),
+            equipment_desc   TEXT,
+            material         VARCHAR(30),
+            plant            VARCHAR(10),
+            usage            VARCHAR(5),
+            item_node        VARCHAR(10),
+            bom_category     VARCHAR(5),
+            equip_category   VARCHAR(5),
+            criticality      VARCHAR(5),
+            alternative      VARCHAR(5),
+            component        VARCHAR(30),
+            component_desc   TEXT,
+            mfr_part_number  VARCHAR(100),
+            old_matl_number  VARCHAR(50),
+            material_type    VARCHAR(10),
+            item             VARCHAR(10),
+            item_category    VARCHAR(5),
+            quantity         NUMERIC(18,3),
+            component_unit   VARCHAR(10),
+            assembly         VARCHAR(50),
+            sort_string      VARCHAR(50),
+            spare_part_id    VARCHAR(10),
+            item_text        TEXT,
+            cost_element     VARCHAR(20),
+            purch_group      VARCHAR(10),
+            valid_from       DATE,
+            valid_to         DATE,
+            upload_batch     VARCHAR(50),
+            uploaded_at      TIMESTAMP DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_sap_bom_equipment ON sap_bom(equipment);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_bom_component ON sap_bom(component);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_bom_batch ON sap_bom(upload_batch);",
+
         # ── Control Tower outputs ─────────────────────────────────
         """
         CREATE TABLE IF NOT EXISTS control_tower_outputs (
@@ -258,13 +297,27 @@ def insert_sap_work_orders(rows: list, batch_id: str):
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
+def insert_sap_bom(rows: list, batch_id: str):
+    with db_cursor() as cur:
+        cur.executemany("""
+            INSERT INTO sap_bom
+            (equipment,equipment_desc,material,plant,usage,item_node,bom_category,
+             equip_category,criticality,alternative,component,component_desc,
+             mfr_part_number,old_matl_number,material_type,item,item_category,
+             quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
+             cost_element,purch_group,valid_from,valid_to,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, rows)
+
 def get_sap_summary():
     with db_cursor() as cur:
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_notifications")
         notif = cur.fetchone()
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_work_orders")
         wo = cur.fetchone()
-        return {"notifications": dict(notif), "work_orders": dict(wo)}
+        cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_bom")
+        bom = cur.fetchone()
+        return {"notifications": dict(notif), "work_orders": dict(wo), "bom": dict(bom)}
 
 # ── Control Tower outputs ─────────────────────────────────────────────────────
 def save_ct_output(output_type: str, title: str, content: str, batch_ref: str = ""):
