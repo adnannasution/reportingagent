@@ -697,13 +697,14 @@ body {
       <!-- ── SAP Upload Panel ───────────────────── -->
       <div id="panel-sap-upload" class="panel">
         <div class="page-header">
-          <div><h2>Upload SAP Data</h2><p>Upload file Excel dari SAP (IW29 Notification / IW39 Work Order)</p></div>
+          <div><h2>Upload SAP Data</h2><p>Upload file Excel dari SAP (IW29 Notification / IW39 Work Order / IW38 PR-PO)</p></div>
         </div>
 
         <div class="generate-card">
           <h3>Upload File Excel SAP</h3>
           <p style="font-size:.8rem;color:var(--ink-3);margin-bottom:16px">
-            Mendukung: <strong>IW29</strong> (M1/M2/M3 — Notification), <strong>IW39</strong> (PT02/PT03/PT05/PT08 — Work Order), dan <strong>BOM</strong> (Bill of Materials).
+            Mendukung: <strong>IW29</strong> (M1/M2/M3 — Notification), <strong>IW39/IW38</strong> (PT02/PT03/PT05/PT08 — Work Order + PR/PO), dan <strong>BOM</strong> (Bill of Materials).
+            File IW39/IW38 secara otomatis menangkap kolom <strong>PR (Res./Purc. req.)</strong>, <strong>PO Number</strong>, <strong>Cost Center</strong>, dan <strong>WBS Element</strong>.
             Bisa upload multiple file sekaligus.
           </p>
 
@@ -716,7 +717,7 @@ body {
                  ondrop="handleDrop(event)">
               <div style="font-size:2rem;margin-bottom:8px">📂</div>
               <div style="font-size:.875rem;font-weight:600;color:var(--ink-2)">Klik atau drag & drop file Excel di sini</div>
-              <div style="font-size:.75rem;color:var(--ink-3);margin-top:4px">IW29_M1.xlsx, IW29_M2.xlsx, IW39_PT02.xlsx, BOM_101GT01A.xlsx, dst</div>
+              <div style="font-size:.75rem;color:var(--ink-3);margin-top:4px">IW29_M1.xlsx, IW29_M2.xlsx, IW39_PT02.xlsx, IW38_PT03.xlsx, BOM_101GT01A.xlsx, dst</div>
             </div>
             <input type="file" id="file-input" multiple accept=".xlsx" style="display:none" onchange="handleFileSelect(event)"/>
           </div>
@@ -1563,18 +1564,24 @@ async function loadControlTower() {
 function updateSapDbInfo(sapRes) {
   const el = document.getElementById('sap-db-info');
   if (!el) return;
-  const nTotal = sapRes.notifications?.total || 0;
-  const wTotal = sapRes.work_orders?.total || 0;
-  const bTotal = sapRes.bom?.total || 0;
+  const nTotal  = sapRes.notifications?.total || 0;
+  const wTotal  = sapRes.work_orders?.total || 0;
+  const bTotal  = sapRes.bom?.total || 0;
+  const prTotal = sapRes.work_orders?.with_pr || 0;
+  const poTotal = sapRes.work_orders?.with_po || 0;
   const fmt = (v) => v ? new Date(v).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—';
   const nLast = fmt(sapRes.notifications?.last_upload);
   const wLast = fmt(sapRes.work_orders?.last_upload);
   const bLast = fmt(sapRes.bom?.last_upload);
   el.innerHTML =
-    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px">' +
     '<div class="stat-card"><div class="label">SAP Notifications</div><div class="value">' + nTotal + '</div><div class="sub">Upload terakhir: ' + nLast + '</div></div>' +
     '<div class="stat-card"><div class="label">SAP Work Orders</div><div class="value">' + wTotal + '</div><div class="sub">Upload terakhir: ' + wLast + '</div></div>' +
     '<div class="stat-card"><div class="label">BOM (Bill of Materials)</div><div class="value">' + bTotal + '</div><div class="sub">Upload terakhir: ' + bLast + '</div></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+    '<div class="stat-card" style="border-left:3px solid var(--blue)"><div class="label">WO dengan PR (Purc. Req.)</div><div class="value" style="color:var(--blue)">' + prTotal + '</div><div class="sub">Work order memiliki nomor PR</div></div>' +
+    '<div class="stat-card" style="border-left:3px solid var(--green)"><div class="label">WO dengan PO Number</div><div class="value" style="color:var(--green)">' + poTotal + '</div><div class="sub">Work order memiliki nomor PO</div></div>' +
     '</div>';
 }
 
