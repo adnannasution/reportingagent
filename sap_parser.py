@@ -144,6 +144,9 @@ def parse_work_order_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Order Type')] if col('Order Type') is not None else None),
             to_str(r[col('Priority')] if col('Priority') is not None else None),
             to_str(r[col('MaintActivType')] if col('MaintActivType') is not None else None),
+            to_str(r[col('Res./Purc. req.')] if col('Res./Purc. req.') is not None else None),
+            to_str(r[col('Cost Center')] if col('Cost Center') is not None else None),
+            to_str(r[col('WBS element')] if col('WBS element') is not None else None),
             batch_id,
         ))
     return results
