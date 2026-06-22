@@ -186,6 +186,7 @@ def api_sap_upload():
     has_notif = False
     has_wo    = False
     has_bom   = False
+    has_cji3  = False
 
     for f in files:
         if not f.filename.lower().endswith('.xlsx'):
@@ -199,6 +200,7 @@ def api_sap_upload():
             if parsed["type"] == "notification": has_notif = True
             if parsed["type"] == "work_order":   has_wo    = True
             if parsed["type"] == "bom":          has_bom   = True
+            if parsed["type"] == "cji3":         has_cji3  = True
         except Exception as e:
             results.append({"file": f.filename, "status": "error", "reason": str(e)})
             os.unlink(tmp.name)
@@ -209,6 +211,7 @@ def api_sap_upload():
             if has_notif: db.clear_sap_batch("ALL", "sap_notifications")
             if has_wo:    db.clear_sap_batch("ALL", "sap_work_orders")
             if has_bom:   db.clear_sap_batch("ALL", "sap_bom")
+            if has_cji3:  db.clear_sap_batch("ALL", "sap_cji3")
         except Exception as e:
             return jsonify({"error": f"Gagal clear data lama: {str(e)}"}), 500
 
@@ -227,6 +230,10 @@ def api_sap_upload():
                 db.insert_sap_bom(parsed["rows"], batch_id)
                 results.append({"file": filename, "status": "ok",
                                  "type": "bom", "rows": parsed["count"]})
+            elif parsed["type"] == "cji3":
+                db.insert_sap_cji3(parsed["rows"], batch_id)
+                results.append({"file": filename, "status": "ok",
+                                 "type": "cji3", "rows": parsed["count"]})
             else:
                 results.append({"file": filename, "status": "skip",
                                  "reason": "Format tidak dikenali"})

@@ -176,6 +176,47 @@ def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_sap_bom_component ON sap_bom(component);",
         "CREATE INDEX IF NOT EXISTS idx_sap_bom_batch ON sap_bom(upload_batch);",
 
+        # ── SAP CJI3 (Project Actual Cost Line Items) ─────────────
+        """
+        CREATE TABLE IF NOT EXISTS sap_cji3 (
+            id                 SERIAL PRIMARY KEY,
+            project_definition VARCHAR(50),
+            wbs_element        VARCHAR(50),
+            posting_date       DATE,
+            period              VARCHAR(5),
+            document_date      DATE,
+            object             VARCHAR(30),
+            document_number    VARCHAR(30),
+            ref_document_number VARCHAR(30),
+            cost_element       VARCHAR(20),
+            fiscal_year        VARCHAR(5),
+            cost_element_name  VARCHAR(100),
+            co_object_name     TEXT,
+            name               TEXT,
+            original_bus_trans VARCHAR(50),
+            object_type        VARCHAR(10),
+            order_no           VARCHAR(20),
+            purchasing_document VARCHAR(30),
+            purchase_order_text TEXT,
+            transaction_currency VARCHAR(10),
+            value_trancurr     NUMERIC(18,2),
+            report_currency    VARCHAR(10),
+            val_in_rep_cur     NUMERIC(18,2),
+            object_currency    VARCHAR(10),
+            value_in_obj_crcy  NUMERIC(18,2),
+            user_name          VARCHAR(50),
+            material           VARCHAR(30),
+            material_description TEXT,
+            total_quantity     NUMERIC(18,3),
+            unit_of_measure    VARCHAR(10),
+            upload_batch       VARCHAR(50),
+            uploaded_at        TIMESTAMP DEFAULT NOW()
+        );
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_sap_cji3_project ON sap_cji3(project_definition);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_cji3_wbs ON sap_cji3(wbs_element);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_cji3_batch ON sap_cji3(upload_batch);",
+
         # ── Control Tower outputs ─────────────────────────────────
         """
         CREATE TABLE IF NOT EXISTS control_tower_outputs (
@@ -314,6 +355,31 @@ def insert_sap_bom(rows: list, batch_id: str):
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
+def insert_sap_bom(rows: list, batch_id: str):
+    with db_cursor() as cur:
+        cur.executemany("""
+            INSERT INTO sap_bom
+            (equipment,equipment_desc,material,plant,usage,item_node,bom_category,
+             equip_category,criticality,alternative,component,component_desc,
+             mfr_part_number,old_matl_number,material_type,item,item_category,
+             quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
+             cost_element,purch_group,valid_from,valid_to,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, rows)
+
+def insert_sap_cji3(rows: list, batch_id: str):
+    with db_cursor() as cur:
+        cur.executemany("""
+            INSERT INTO sap_cji3
+            (project_definition,wbs_element,posting_date,period,document_date,object,
+             document_number,ref_document_number,cost_element,fiscal_year,cost_element_name,
+             co_object_name,name,original_bus_trans,object_type,order_no,purchasing_document,
+             purchase_order_text,transaction_currency,value_trancurr,report_currency,
+             val_in_rep_cur,object_currency,value_in_obj_crcy,user_name,material,
+             material_description,total_quantity,unit_of_measure,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, rows)
+
 def get_sap_summary():
     with db_cursor() as cur:
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_notifications")
@@ -327,7 +393,9 @@ def get_sap_summary():
         wo = cur.fetchone()
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_bom")
         bom = cur.fetchone()
-        return {"notifications": dict(notif), "work_orders": dict(wo), "bom": dict(bom)}
+        cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_cji3")
+        cji3 = cur.fetchone()
+        return {"notifications": dict(notif), "work_orders": dict(wo), "bom": dict(bom), "cji3": dict(cji3)}
 
 # ── Control Tower outputs ─────────────────────────────────────────────────────
 def save_ct_output(output_type: str, title: str, content: str, batch_ref: str = ""):

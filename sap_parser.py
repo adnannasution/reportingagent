@@ -37,6 +37,8 @@ def detect_file_type(header: tuple) -> str:
         return 'work_order'
     if 'BOM category' in cols and 'Component' in cols:
         return 'bom'
+    if 'WBS Element' in cols and 'Cost Element' in cols and 'Project Definition' in cols:
+        return 'cji3'
     return 'unknown'
 
 
@@ -216,6 +218,127 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
     return results
 
 
+def parse_bom_file(filepath: str, batch_id: str) -> list:
+    """Parse BOM Excel → list of tuples untuk insert."""
+    wb = openpyxl.load_workbook(filepath, read_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+
+    if not rows:
+        return []
+
+    header = [str(c).strip() if c else '' for c in rows[0]]
+
+    def col(name):
+        try:
+            return header.index(name)
+        except ValueError:
+            return None
+
+    # Kolom Description muncul dua kali (equipment & component), ambil index keduanya
+    desc_indices = [i for i, h in enumerate(header) if h == 'Description']
+    eq_desc_idx   = desc_indices[0] if len(desc_indices) > 0 else None
+    comp_desc_idx = desc_indices[1] if len(desc_indices) > 1 else None
+
+    # Item text juga bisa muncul dua kali
+    itext_indices = [i for i, h in enumerate(header) if h.lower() == 'item text']
+    item_text_idx = itext_indices[0] if itext_indices else None
+
+    results = []
+    for r in rows[1:]:
+        if not any(c is not None for c in r):
+            continue
+        results.append((
+            to_str(r[col('Equipment')] if col('Equipment') is not None else None),
+            to_str(r[eq_desc_idx] if eq_desc_idx is not None else None),
+            to_str(r[col('Material')] if col('Material') is not None else None),
+            to_str(r[col('Plant')] if col('Plant') is not None else None),
+            to_str(r[col('Usage')] if col('Usage') is not None else None),
+            to_str(r[col('Item node')] if col('Item node') is not None else None),
+            to_str(r[col('BOM category')] if col('BOM category') is not None else None),
+            to_str(r[col('EquipCategory')] if col('EquipCategory') is not None else None),
+            to_str(r[col('Criticallity')] if col('Criticallity') is not None else None),
+            to_str(r[col('Alternative')] if col('Alternative') is not None else None),
+            to_str(r[col('Component')] if col('Component') is not None else None),
+            to_str(r[comp_desc_idx] if comp_desc_idx is not None else None),
+            to_str(r[col('Mfr Part Number')] if col('Mfr Part Number') is not None else None),
+            to_str(r[col('Old matl number')] if col('Old matl number') is not None else None),
+            to_str(r[col('Material Type')] if col('Material Type') is not None else None),
+            to_str(r[col('Item')] if col('Item') is not None else None),
+            to_str(r[col('Item Category')] if col('Item Category') is not None else None),
+            to_float(r[col('Quantity')] if col('Quantity') is not None else None),
+            to_str(r[col('Component unit')] if col('Component unit') is not None else None),
+            to_str(r[col('Assembly')] if col('Assembly') is not None else None),
+            to_str(r[col('Sort String')] if col('Sort String') is not None else None),
+            to_str(r[col('Spare part ID')] if col('Spare part ID') is not None else None),
+            to_str(r[item_text_idx] if item_text_idx is not None else None),
+            to_str(r[col('Cost element')] if col('Cost element') is not None else None),
+            to_str(r[col('Purch. Group')] if col('Purch. Group') is not None else None),
+            to_date(r[col('Valid From')] if col('Valid From') is not None else None),
+            to_date(r[col('Valid To')] if col('Valid To') is not None else None),
+            batch_id,
+        ))
+    return results
+
+
+def parse_cji3_file(filepath: str, batch_id: str) -> list:
+    """Parse CJI3 (Project Actual Cost Line Items) Excel → list of tuples untuk insert."""
+    wb = openpyxl.load_workbook(filepath, read_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+
+    if not rows:
+        return []
+
+    header = [str(c).strip() if c else '' for c in rows[0]]
+
+    def col(name):
+        try:
+            return header.index(name)
+        except ValueError:
+            return None
+
+    results = []
+    for r in rows[1:]:
+        if not any(c is not None for c in r):
+            continue
+        results.append((
+            to_str(r[col('Project Definition')] if col('Project Definition') is not None else None),
+            to_str(r[col('WBS Element')] if col('WBS Element') is not None else None),
+            to_date(r[col('Posting Date')] if col('Posting Date') is not None else None),
+            to_str(r[col('Period')] if col('Period') is not None else None),
+            to_date(r[col('Document Date')] if col('Document Date') is not None else None),
+            to_str(r[col('Object')] if col('Object') is not None else None),
+            to_str(r[col('Document Number')] if col('Document Number') is not None else None),
+            to_str(r[col('Ref Document Number')] if col('Ref Document Number') is not None else None),
+            to_str(r[col('Cost Element')] if col('Cost Element') is not None else None),
+            to_str(r[col('Fiscal Year')] if col('Fiscal Year') is not None else None),
+            to_str(r[col('Cost element name')] if col('Cost element name') is not None else None),
+            to_str(r[col('CO object name')] if col('CO object name') is not None else None),
+            to_str(r[col('Name')] if col('Name') is not None else None),
+            to_str(r[col('Original bus. trans')] if col('Original bus. trans') is not None else None),
+            to_str(r[col('Object type')] if col('Object type') is not None else None),
+            to_str(r[col('Order')] if col('Order') is not None else None),
+            to_str(r[col('Purchasing Document')] if col('Purchasing Document') is not None else None),
+            to_str(r[col('Purchase order text')] if col('Purchase order text') is not None else None),
+            to_str(r[col('Transaction Currency')] if col('Transaction Currency') is not None else None),
+            to_float(r[col('Value TranCurr')] if col('Value TranCurr') is not None else None),
+            to_str(r[col('Report currency')] if col('Report currency') is not None else None),
+            to_float(r[col('Val.in rep.cur.')] if col('Val.in rep.cur.') is not None else None),
+            to_str(r[col('Object Currency')] if col('Object Currency') is not None else None),
+            to_float(r[col('Value in Obj. Crcy')] if col('Value in Obj. Crcy') is not None else None),
+            to_str(r[col('User Name')] if col('User Name') is not None else None),
+            to_str(r[col('Material')] if col('Material') is not None else None),
+            to_str(r[col('Material Description')] if col('Material Description') is not None else None),
+            to_float(r[col('Total quantity')] if col('Total quantity') is not None else None),
+            to_str(r[col('Unit of Measure')] if col('Unit of Measure') is not None else None),
+            batch_id,
+        ))
+    return results
+
+
 def parse_file(filepath: str, batch_id: str) -> dict:
     """Auto-detect dan parse file SAP Excel."""
     wb = openpyxl.load_workbook(filepath, read_only=True)
@@ -234,5 +357,8 @@ def parse_file(filepath: str, batch_id: str) -> dict:
     elif file_type == 'bom':
         rows = parse_bom_file(filepath, batch_id)
         return {"type": "bom", "rows": rows, "count": len(rows)}
+    elif file_type == 'cji3':
+        rows = parse_cji3_file(filepath, batch_id)
+        return {"type": "cji3", "rows": rows, "count": len(rows)}
     else:
         return {"type": "unknown", "rows": [], "count": 0}
