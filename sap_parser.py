@@ -37,6 +37,8 @@ def detect_file_type(header: tuple) -> str:
         return 'work_order'
     if 'BOM category' in cols and 'Component' in cols:
         return 'bom'
+    if 'WBS Element' in cols and 'Cost Element' in cols and 'Project Definition' in cols:
+        return 'cji3'
     return 'unknown'
 
 
@@ -213,6 +215,63 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
     return results
 
 
+def parse_cji3_file(filepath: str, batch_id: str) -> list:
+    """Parse CJI3 (Project Actual Cost Line Items) Excel → list of tuples untuk insert."""
+    wb = openpyxl.load_workbook(filepath, read_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+
+    if not rows:
+        return []
+
+    header = [str(c).strip() if c else '' for c in rows[0]]
+
+    def col(name):
+        try:
+            return header.index(name)
+        except ValueError:
+            return None
+
+    results = []
+    for r in rows[1:]:
+        if not any(c is not None for c in r):
+            continue
+        results.append((
+            to_str(r[col('Project Definition')] if col('Project Definition') is not None else None),
+            to_str(r[col('WBS Element')] if col('WBS Element') is not None else None),
+            to_date(r[col('Posting Date')] if col('Posting Date') is not None else None),
+            to_str(r[col('Period')] if col('Period') is not None else None),
+            to_date(r[col('Document Date')] if col('Document Date') is not None else None),
+            to_str(r[col('Object')] if col('Object') is not None else None),
+            to_str(r[col('Document Number')] if col('Document Number') is not None else None),
+            to_str(r[col('Ref Document Number')] if col('Ref Document Number') is not None else None),
+            to_str(r[col('Cost Element')] if col('Cost Element') is not None else None),
+            to_str(r[col('Fiscal Year')] if col('Fiscal Year') is not None else None),
+            to_str(r[col('Cost element name')] if col('Cost element name') is not None else None),
+            to_str(r[col('CO object name')] if col('CO object name') is not None else None),
+            to_str(r[col('Name')] if col('Name') is not None else None),
+            to_str(r[col('Original bus. trans')] if col('Original bus. trans') is not None else None),
+            to_str(r[col('Object type')] if col('Object type') is not None else None),
+            to_str(r[col('Order')] if col('Order') is not None else None),
+            to_str(r[col('Purchasing Document')] if col('Purchasing Document') is not None else None),
+            to_str(r[col('Purchase order text')] if col('Purchase order text') is not None else None),
+            to_str(r[col('Transaction Currency')] if col('Transaction Currency') is not None else None),
+            to_float(r[col('Value TranCurr')] if col('Value TranCurr') is not None else None),
+            to_str(r[col('Report currency')] if col('Report currency') is not None else None),
+            to_float(r[col('Val.in rep.cur.')] if col('Val.in rep.cur.') is not None else None),
+            to_str(r[col('Object Currency')] if col('Object Currency') is not None else None),
+            to_float(r[col('Value in Obj. Crcy')] if col('Value in Obj. Crcy') is not None else None),
+            to_str(r[col('User Name')] if col('User Name') is not None else None),
+            to_str(r[col('Material')] if col('Material') is not None else None),
+            to_str(r[col('Material Description')] if col('Material Description') is not None else None),
+            to_float(r[col('Total quantity')] if col('Total quantity') is not None else None),
+            to_str(r[col('Unit of Measure')] if col('Unit of Measure') is not None else None),
+            batch_id,
+        ))
+    return results
+
+
 def parse_file(filepath: str, batch_id: str) -> dict:
     """Auto-detect dan parse file SAP Excel."""
     wb = openpyxl.load_workbook(filepath, read_only=True)
@@ -231,5 +290,8 @@ def parse_file(filepath: str, batch_id: str) -> dict:
     elif file_type == 'bom':
         rows = parse_bom_file(filepath, batch_id)
         return {"type": "bom", "rows": rows, "count": len(rows)}
+    elif file_type == 'cji3':
+        rows = parse_cji3_file(filepath, batch_id)
+        return {"type": "cji3", "rows": rows, "count": len(rows)}
     else:
         return {"type": "unknown", "rows": [], "count": 0}
