@@ -146,6 +146,73 @@ def parse_work_order_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Order Type')] if col('Order Type') is not None else None),
             to_str(r[col('Priority')] if col('Priority') is not None else None),
             to_str(r[col('MaintActivType')] if col('MaintActivType') is not None else None),
+            to_str(r[col('Res./Purc. req.')] if col('Res./Purc. req.') is not None else None),
+            to_str(r[col('Cost Center')] if col('Cost Center') is not None else None),
+            to_str(r[col('WBS element')] if col('WBS element') is not None else None),
+            batch_id,
+        ))
+    return results
+
+
+def parse_bom_file(filepath: str, batch_id: str) -> list:
+    """Parse BOM Excel → list of tuples untuk insert."""
+    wb = openpyxl.load_workbook(filepath, read_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
+
+    if not rows:
+        return []
+
+    header = [str(c).strip() if c else '' for c in rows[0]]
+
+    def col(name):
+        try:
+            return header.index(name)
+        except ValueError:
+            return None
+
+    # Kolom Description muncul dua kali (equipment & component), ambil index keduanya
+    desc_indices = [i for i, h in enumerate(header) if h == 'Description']
+    eq_desc_idx   = desc_indices[0] if len(desc_indices) > 0 else None
+    comp_desc_idx = desc_indices[1] if len(desc_indices) > 1 else None
+
+    # Item text juga bisa muncul dua kali
+    itext_indices = [i for i, h in enumerate(header) if h.lower() == 'item text']
+    item_text_idx = itext_indices[0] if itext_indices else None
+
+    results = []
+    for r in rows[1:]:
+        if not any(c is not None for c in r):
+            continue
+        results.append((
+            to_str(r[col('Equipment')] if col('Equipment') is not None else None),
+            to_str(r[eq_desc_idx] if eq_desc_idx is not None else None),
+            to_str(r[col('Material')] if col('Material') is not None else None),
+            to_str(r[col('Plant')] if col('Plant') is not None else None),
+            to_str(r[col('Usage')] if col('Usage') is not None else None),
+            to_str(r[col('Item node')] if col('Item node') is not None else None),
+            to_str(r[col('BOM category')] if col('BOM category') is not None else None),
+            to_str(r[col('EquipCategory')] if col('EquipCategory') is not None else None),
+            to_str(r[col('Criticallity')] if col('Criticallity') is not None else None),
+            to_str(r[col('Alternative')] if col('Alternative') is not None else None),
+            to_str(r[col('Component')] if col('Component') is not None else None),
+            to_str(r[comp_desc_idx] if comp_desc_idx is not None else None),
+            to_str(r[col('Mfr Part Number')] if col('Mfr Part Number') is not None else None),
+            to_str(r[col('Old matl number')] if col('Old matl number') is not None else None),
+            to_str(r[col('Material Type')] if col('Material Type') is not None else None),
+            to_str(r[col('Item')] if col('Item') is not None else None),
+            to_str(r[col('Item Category')] if col('Item Category') is not None else None),
+            to_float(r[col('Quantity')] if col('Quantity') is not None else None),
+            to_str(r[col('Component unit')] if col('Component unit') is not None else None),
+            to_str(r[col('Assembly')] if col('Assembly') is not None else None),
+            to_str(r[col('Sort String')] if col('Sort String') is not None else None),
+            to_str(r[col('Spare part ID')] if col('Spare part ID') is not None else None),
+            to_str(r[item_text_idx] if item_text_idx is not None else None),
+            to_str(r[col('Cost element')] if col('Cost element') is not None else None),
+            to_str(r[col('Purch. Group')] if col('Purch. Group') is not None else None),
+            to_date(r[col('Valid From')] if col('Valid From') is not None else None),
+            to_date(r[col('Valid To')] if col('Valid To') is not None else None),
             batch_id,
         ))
     return results

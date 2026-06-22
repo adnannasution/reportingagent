@@ -127,6 +127,11 @@ def run_migrations():
             uploaded_at      TIMESTAMP DEFAULT NOW()
         );
         """,
+        # ── Kolom tambahan IW39: PR, Cost Center, WBS ─────────────
+        "ALTER TABLE sap_work_orders ADD COLUMN IF NOT EXISTS purc_req VARCHAR(20);",
+        "ALTER TABLE sap_work_orders ADD COLUMN IF NOT EXISTS cost_center VARCHAR(20);",
+        "ALTER TABLE sap_work_orders ADD COLUMN IF NOT EXISTS wbs_element VARCHAR(50);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_wo_purc_req ON sap_work_orders(purc_req);",
         "CREATE INDEX IF NOT EXISTS idx_sap_wo_status ON sap_work_orders(system_status);",
         "CREATE INDEX IF NOT EXISTS idx_sap_wo_eq ON sap_work_orders(equipment);",
         "CREATE INDEX IF NOT EXISTS idx_sap_wo_type ON sap_work_orders(order_type);",
@@ -334,8 +339,20 @@ def insert_sap_work_orders(rows: list, batch_id: str):
              order_no,superior_order,description,functional_loc,location,equipment,
              criticality,user_status,system_status,planner_group,total_plan_cost,
              total_act_cost,main_workctr,po_number,actual_finish,actual_release,
-             order_type,priority,maint_act_type,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             order_type,priority,maint_act_type,purc_req,cost_center,wbs_element,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, rows)
+
+def insert_sap_bom(rows: list, batch_id: str):
+    with db_cursor() as cur:
+        cur.executemany("""
+            INSERT INTO sap_bom
+            (equipment,equipment_desc,material,plant,usage,item_node,bom_category,
+             equip_category,criticality,alternative,component,component_desc,
+             mfr_part_number,old_matl_number,material_type,item,item_category,
+             quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
+             cost_element,purch_group,valid_from,valid_to,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def insert_sap_bom(rows: list, batch_id: str):
@@ -367,7 +384,12 @@ def get_sap_summary():
     with db_cursor() as cur:
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_notifications")
         notif = cur.fetchone()
-        cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_work_orders")
+        cur.execute("""
+            SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload,
+                   SUM(CASE WHEN purc_req IS NOT NULL AND purc_req <> '' THEN 1 ELSE 0 END) AS with_pr,
+                   SUM(CASE WHEN po_number IS NOT NULL AND po_number <> '' THEN 1 ELSE 0 END) AS with_po
+            FROM sap_work_orders
+        """)
         wo = cur.fetchone()
         cur.execute("SELECT COUNT(*) AS total, MAX(uploaded_at) AS last_upload FROM sap_bom")
         bom = cur.fetchone()
