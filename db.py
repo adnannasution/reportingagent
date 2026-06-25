@@ -377,7 +377,7 @@ def insert_sap_cji3(rows: list, batch_id: str):
              purchase_order_text,transaction_currency,value_trancurr,report_currency,
              val_in_rep_cur,object_currency,value_in_obj_crcy,user_name,material,
              material_description,total_quantity,unit_of_measure,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def get_sap_summary():
