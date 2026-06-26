@@ -1693,6 +1693,9 @@ function renderFileList() {
 
 async function submitUpload() {
   if (!selectedFiles.length) return;
+  const pin = prompt('Masukkan PIN untuk upload:');
+  if (pin === null) return;
+  if (pin !== '128128') { alert('PIN salah.'); return; }
   const btn   = document.getElementById('upload-btn');
   const btnTx = document.getElementById('upload-btn-text');
   btn.disabled = true;
