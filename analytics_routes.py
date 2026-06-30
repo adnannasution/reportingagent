@@ -570,6 +570,7 @@ def _build_detail_query(source, args):
             f"LEFT(description,80) AS description,equipment,location,"
             f"basic_fin_date,"
             f"(CURRENT_DATE - basic_fin_date)::INTEGER AS days_overdue,"
+            f"total_act_cost,"
             f"main_workctr "
             f"FROM sap_work_orders "
             f"WHERE basic_fin_date < CURRENT_DATE "
@@ -578,7 +579,10 @@ def _build_detail_query(source, args):
             f"  AND {bw} "
             f"ORDER BY days_overdue DESC",
             (),
-            WO_COLS[:-1] + [col("days_overdue", "Hari Overdue", "number")],
+            WO_COLS[:-1] + [
+                col("days_overdue",   "Hari Overdue", "number"),
+                col("total_act_cost", "Cost Actual",  "currency"),
+            ],
             f"WO Overdue — {bucket}",
         )
 
