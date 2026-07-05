@@ -429,7 +429,12 @@ def get_sap_data_for_agent():
         # Notifikasi OSNO belum ada WO (backlog)
         cur.execute("""
             SELECT notif_type, notification, system_status, req_start, required_end,
-                   main_workctr, description, equipment, functional_loc, criticality, location
+                   UPPER(TRIM(main_workctr)) AS main_workctr,
+                   description,
+                   UPPER(TRIM(equipment)) AS equipment,
+                   UPPER(TRIM(functional_loc)) AS functional_loc,
+                   criticality,
+                   UPPER(TRIM(location)) AS location
             FROM sap_notifications
             WHERE (order_no IS NULL OR order_no = '')
               AND system_status ILIKE '%OSNO%'
@@ -440,7 +445,10 @@ def get_sap_data_for_agent():
         # Notifikasi overdue (req end lewat, belum WO)
         cur.execute("""
             SELECT notif_type, notification, system_status, req_start, required_end,
-                   description, equipment, criticality, location
+                   description,
+                   UPPER(TRIM(equipment)) AS equipment,
+                   criticality,
+                   UPPER(TRIM(location)) AS location
             FROM sap_notifications
             WHERE (order_no IS NULL OR order_no = '')
               AND required_end < CURRENT_DATE
@@ -451,8 +459,13 @@ def get_sap_data_for_agent():
         # WO stagnant (REL tapi belum actual finish, fin date lewat)
         cur.execute("""
             SELECT order_no, order_type, system_status, bas_start_date, basic_fin_date,
-                   description, equipment, functional_loc, criticality, location,
-                   main_workctr, actual_release, actual_finish
+                   description,
+                   UPPER(TRIM(equipment)) AS equipment,
+                   UPPER(TRIM(functional_loc)) AS functional_loc,
+                   criticality,
+                   UPPER(TRIM(location)) AS location,
+                   UPPER(TRIM(main_workctr)) AS main_workctr,
+                   actual_release, actual_finish
             FROM sap_work_orders
             WHERE system_status ILIKE '%REL%'
               AND (actual_finish IS NULL)
@@ -463,7 +476,11 @@ def get_sap_data_for_agent():
         # WO overdue (fin date lewat, belum TECO/CLSD)
         cur.execute("""
             SELECT order_no, order_type, system_status, basic_fin_date,
-                   description, equipment, criticality, location, main_workctr
+                   description,
+                   UPPER(TRIM(equipment)) AS equipment,
+                   criticality,
+                   UPPER(TRIM(location)) AS location,
+                   UPPER(TRIM(main_workctr)) AS main_workctr
             FROM sap_work_orders
             WHERE basic_fin_date < CURRENT_DATE
               AND system_status NOT ILIKE '%TECO%'
@@ -475,7 +492,11 @@ def get_sap_data_for_agent():
         # WO CRTD (belum release)
         cur.execute("""
             SELECT order_no, order_type, system_status, bas_start_date, basic_fin_date,
-                   description, equipment, criticality, location, main_workctr
+                   description,
+                   UPPER(TRIM(equipment)) AS equipment,
+                   criticality,
+                   UPPER(TRIM(location)) AS location,
+                   UPPER(TRIM(main_workctr)) AS main_workctr
             FROM sap_work_orders
             WHERE system_status ILIKE '%CRTD%'
               AND system_status NOT ILIKE '%REL%'
@@ -485,7 +506,7 @@ def get_sap_data_for_agent():
 
         # Summary per order type
         cur.execute("""
-            SELECT order_type,
+            SELECT UPPER(TRIM(order_type)) AS order_type,
                    COUNT(*) AS total,
                    SUM(CASE WHEN system_status ILIKE '%REL%' AND actual_finish IS NULL THEN 1 ELSE 0 END) AS stagnant,
                    SUM(CASE WHEN system_status ILIKE '%TECO%' THEN 1 ELSE 0 END) AS teco,
@@ -494,27 +515,29 @@ def get_sap_data_for_agent():
                              AND system_status NOT ILIKE '%TECO%'
                              AND system_status NOT ILIKE '%CLSD%' THEN 1 ELSE 0 END) AS overdue
             FROM sap_work_orders
-            GROUP BY order_type ORDER BY order_type
+            GROUP BY UPPER(TRIM(order_type)) ORDER BY UPPER(TRIM(order_type))
         """)
         wo_summary = cur.fetchall()
 
         # Summary notif per status
         cur.execute("""
-            SELECT system_status, COUNT(*) AS total,
+            SELECT UPPER(TRIM(system_status)) AS system_status,
+                   COUNT(*) AS total,
                    SUM(CASE WHEN order_no IS NULL OR order_no='' THEN 1 ELSE 0 END) AS no_wo
             FROM sap_notifications
-            GROUP BY system_status ORDER BY total DESC
+            GROUP BY UPPER(TRIM(system_status)) ORDER BY total DESC
         """)
         notif_summary = cur.fetchall()
 
         # Repeated notif pada equipment yang sama
         cur.execute("""
-            SELECT equipment, COUNT(*) AS notif_count,
-                   STRING_AGG(DISTINCT system_status, ', ') AS statuses,
+            SELECT UPPER(TRIM(equipment)) AS equipment,
+                   COUNT(*) AS notif_count,
+                   STRING_AGG(DISTINCT UPPER(TRIM(system_status)), ', ') AS statuses,
                    MAX(required_end) AS latest_req_end
             FROM sap_notifications
             WHERE equipment IS NOT NULL AND equipment != ''
-            GROUP BY equipment
+            GROUP BY UPPER(TRIM(equipment))
             HAVING COUNT(*) > 1
             ORDER BY notif_count DESC LIMIT 15
         """)
