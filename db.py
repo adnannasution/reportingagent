@@ -217,6 +217,16 @@ def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_sap_cji3_wbs ON sap_cji3(wbs_element);",
         "CREATE INDEX IF NOT EXISTS idx_sap_cji3_batch ON sap_cji3(upload_batch);",
 
+        # ── Kolom ru (normalisasi nama RU) ───────────────────────────
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS ru VARCHAR(30);",
+        "ALTER TABLE sap_work_orders   ADD COLUMN IF NOT EXISTS ru VARCHAR(30);",
+        "ALTER TABLE sap_bom           ADD COLUMN IF NOT EXISTS ru VARCHAR(30);",
+        "ALTER TABLE sap_cji3          ADD COLUMN IF NOT EXISTS ru VARCHAR(30);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_notif_ru ON sap_notifications(ru);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_wo_ru    ON sap_work_orders(ru);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_bom_ru   ON sap_bom(ru);",
+        "CREATE INDEX IF NOT EXISTS idx_sap_cji3_ru  ON sap_cji3(ru);",
+
         # ── Control Tower outputs ─────────────────────────────────
         """
         CREATE TABLE IF NOT EXISTS control_tower_outputs (
@@ -327,8 +337,8 @@ def insert_sap_notifications(rows: list, batch_id: str):
             INSERT INTO sap_notifications
             (notif_type,notif_date,notification,system_status,req_start,required_end,
              main_workctr,planner_group,description,order_no,location,functional_loc,
-             equipment,criticality,maint_plant,has_long_text,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             equipment,criticality,maint_plant,has_long_text,ru,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def insert_sap_work_orders(rows: list, batch_id: str):
@@ -339,7 +349,19 @@ def insert_sap_work_orders(rows: list, batch_id: str):
              order_no,superior_order,description,functional_loc,location,equipment,
              criticality,user_status,system_status,planner_group,total_plan_cost,
              total_act_cost,main_workctr,po_number,actual_finish,actual_release,
-             order_type,priority,maint_act_type,purc_req,cost_center,wbs_element,upload_batch)
+             order_type,priority,maint_act_type,purc_req,cost_center,wbs_element,ru,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, rows)
+
+def insert_sap_bom(rows: list, batch_id: str):
+    with db_cursor() as cur:
+        cur.executemany("""
+            INSERT INTO sap_bom
+            (equipment,equipment_desc,material,plant,usage,item_node,bom_category,
+             equip_category,criticality,alternative,component,component_desc,
+             mfr_part_number,old_matl_number,material_type,item,item_category,
+             quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
+             cost_element,purch_group,valid_from,valid_to,ru,upload_batch)
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
@@ -351,20 +373,8 @@ def insert_sap_bom(rows: list, batch_id: str):
              equip_category,criticality,alternative,component,component_desc,
              mfr_part_number,old_matl_number,material_type,item,item_category,
              quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
-             cost_element,purch_group,valid_from,valid_to,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-        """, rows)
-
-def insert_sap_bom(rows: list, batch_id: str):
-    with db_cursor() as cur:
-        cur.executemany("""
-            INSERT INTO sap_bom
-            (equipment,equipment_desc,material,plant,usage,item_node,bom_category,
-             equip_category,criticality,alternative,component,component_desc,
-             mfr_part_number,old_matl_number,material_type,item,item_category,
-             quantity,component_unit,assembly,sort_string,spare_part_id,item_text,
-             cost_element,purch_group,valid_from,valid_to,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             cost_element,purch_group,valid_from,valid_to,ru,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def insert_sap_cji3(rows: list, batch_id: str):
@@ -376,8 +386,8 @@ def insert_sap_cji3(rows: list, batch_id: str):
              co_object_name,name,original_bus_trans,object_type,order_no,purchasing_document,
              purchase_order_text,transaction_currency,value_trancurr,report_currency,
              val_in_rep_cur,object_currency,value_in_obj_crcy,user_name,material,
-             material_description,total_quantity,unit_of_measure,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             material_description,total_quantity,unit_of_measure,ru,upload_batch)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def get_sap_summary():

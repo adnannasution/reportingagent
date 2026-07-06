@@ -6,6 +6,33 @@ Support: IW29 (Notification), IW39 PT02/PT03/PT05/PT08 (Work Orders)
 import openpyxl
 from datetime import datetime, date
 
+# Mapping kode plant SAP → nama RU standar
+_RU_MAP = {
+    "201": "RU II Dumai",
+    "202": "RU II Pakning",
+    "301": "RU III Plaju",
+    "401": "RU IV Cilacap",
+    "501": "RU V Balikpapan",
+    "601": "RU VI Balongan",
+    "701": "RU VII Kasim",
+}
+
+
+def normalize_ru(val) -> str | None:
+    """Normalisasi kode plant/maint_plant SAP → nama RU standar.
+
+    Menerima format: R201, K201, 6201, 201, dsb.
+    """
+    if val is None:
+        return None
+    s = str(val).strip().upper()
+    # Ambil 3 digit terakhir sebagai kode numerik
+    digits = ''.join(filter(str.isdigit, s))
+    if len(digits) >= 3:
+        key = digits[-3:]
+        return _RU_MAP.get(key)
+    return None
+
 
 def to_date(val):
     if val is None:
@@ -70,6 +97,7 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
         if lt_idx is not None and r[lt_idx]:
             has_long = str(r[lt_idx]).strip() in ('X', 'x', '1', 'True')
 
+        maint_plant = to_str(r[col('MaintPlant')] if col('MaintPlant') is not None else None)
         results.append((
             to_str(r[col('Notifictn type')] if col('Notifictn type') is not None else None),
             to_date(r[col('Notif.date')] if col('Notif.date') is not None else None),
@@ -85,8 +113,9 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Functional Loc.')] if col('Functional Loc.') is not None else None),
             to_str(r[col('Equipment')] if col('Equipment') is not None else None),
             to_str(r[col('Criticallity')] if col('Criticallity') is not None else None),
-            to_str(r[col('MaintPlant')] if col('MaintPlant') is not None else None),
+            maint_plant,
             has_long,
+            normalize_ru(maint_plant),
             batch_id,
         ))
     return results
@@ -120,8 +149,9 @@ def parse_work_order_file(filepath: str, batch_id: str) -> list:
         user_st_raw = r[col('User status')] if col('User status') is not None else None
         user_st = to_str(user_st_raw)
 
+        plant = to_str(r[col('Plant')] if col('Plant') is not None else None)
         results.append((
-            to_str(r[col('Plant')] if col('Plant') is not None else None),
+            plant,
             to_date(r[col('Created on')] if col('Created on') is not None else None),
             to_date(r[col('Changed on')] if col('Changed on') is not None else None),
             to_date(r[col('Bas. start date')] if col('Bas. start date') is not None else None),
@@ -149,6 +179,7 @@ def parse_work_order_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Res./Purc. req.')] if col('Res./Purc. req.') is not None else None),
             to_str(r[col('Cost Center')] if col('Cost Center') is not None else None),
             to_str(r[col('WBS element')] if col('WBS element') is not None else None),
+            normalize_ru(plant),
             batch_id,
         ))
     return results
@@ -185,11 +216,12 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
     for r in rows[1:]:
         if not any(c is not None for c in r):
             continue
+        plant = to_str(r[col('Plant')] if col('Plant') is not None else None)
         results.append((
             to_str(r[col('Equipment')] if col('Equipment') is not None else None),
             to_str(r[eq_desc_idx] if eq_desc_idx is not None else None),
             to_str(r[col('Material')] if col('Material') is not None else None),
-            to_str(r[col('Plant')] if col('Plant') is not None else None),
+            plant,
             to_str(r[col('Usage')] if col('Usage') is not None else None),
             to_str(r[col('Item node')] if col('Item node') is not None else None),
             to_str(r[col('BOM category')] if col('BOM category') is not None else None),
@@ -213,6 +245,7 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Purch. Group')] if col('Purch. Group') is not None else None),
             to_date(r[col('Valid From')] if col('Valid From') is not None else None),
             to_date(r[col('Valid To')] if col('Valid To') is not None else None),
+            normalize_ru(plant),
             batch_id,
         ))
     return results
@@ -249,11 +282,12 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
     for r in rows[1:]:
         if not any(c is not None for c in r):
             continue
+        plant = to_str(r[col('Plant')] if col('Plant') is not None else None)
         results.append((
             to_str(r[col('Equipment')] if col('Equipment') is not None else None),
             to_str(r[eq_desc_idx] if eq_desc_idx is not None else None),
             to_str(r[col('Material')] if col('Material') is not None else None),
-            to_str(r[col('Plant')] if col('Plant') is not None else None),
+            plant,
             to_str(r[col('Usage')] if col('Usage') is not None else None),
             to_str(r[col('Item node')] if col('Item node') is not None else None),
             to_str(r[col('BOM category')] if col('BOM category') is not None else None),
@@ -277,6 +311,7 @@ def parse_bom_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Purch. Group')] if col('Purch. Group') is not None else None),
             to_date(r[col('Valid From')] if col('Valid From') is not None else None),
             to_date(r[col('Valid To')] if col('Valid To') is not None else None),
+            normalize_ru(plant),
             batch_id,
         ))
     return results
@@ -304,9 +339,11 @@ def parse_cji3_file(filepath: str, batch_id: str) -> list:
     for r in rows[1:]:
         if not any(c is not None for c in r):
             continue
+        project_def = to_str(r[col('Project Definition')] if col('Project Definition') is not None else None)
+        wbs = to_str(r[col('WBS Element')] if col('WBS Element') is not None else None)
         results.append((
-            to_str(r[col('Project Definition')] if col('Project Definition') is not None else None),
-            to_str(r[col('WBS Element')] if col('WBS Element') is not None else None),
+            project_def,
+            wbs,
             to_date(r[col('Posting Date')] if col('Posting Date') is not None else None),
             to_str(r[col('Period')] if col('Period') is not None else None),
             to_date(r[col('Document Date')] if col('Document Date') is not None else None),
@@ -334,6 +371,7 @@ def parse_cji3_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('Material Description')] if col('Material Description') is not None else None),
             to_float(r[col('Total quantity')] if col('Total quantity') is not None else None),
             to_str(r[col('Unit of Measure')] if col('Unit of Measure') is not None else None),
+            normalize_ru(project_def) or normalize_ru(wbs),
             batch_id,
         ))
     return results
