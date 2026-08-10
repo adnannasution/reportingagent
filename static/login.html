@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SingleSign — Masuk</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --blue:       #1A73E8;
+  --blue-hover: #1557B0;
+  --blue-light: #E8F0FE;
+  --navy:       #1B2B4B;
+  --text:       #202124;
+  --text-mid:   #5F6368;
+  --text-light: #80868B;
+  --border:     #DADCE0;
+  --border-focus: #1A73E8;
+  --white:      #FFFFFF;
+  --bg:         #F8F9FA;
+  --error:      #D93025;
+  --radius:     8px;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'Inter', 'Google Sans', sans-serif;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+/* Top bar brand */
+.topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.topbar-icon {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+}
+.topbar-icon svg {
+  width: 17px; height: 17px;
+  stroke: white; fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topbar-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.topbar-name span { color: var(--blue); }
+
+/* Card */
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 48px 44px;
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+
+/* Step icon */
+.step-icon {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--blue-light);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.step-icon svg {
+  width: 24px; height: 24px;
+  stroke: var(--blue); fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.card-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+  line-height: 1.2;
+}
+
+.card-sub {
+  font-size: 14px;
+  color: var(--text-mid);
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+.card-sub strong { color: var(--text); font-weight: 500; }
+
+/* Input */
+.field-wrap {
+  position: relative;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.float-label {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 15px;
+  color: var(--text-light);
+  pointer-events: none;
+  transition: all 0.18s ease;
+  background: var(--white);
+  padding: 0 3px;
+  letter-spacing: 0.1px;
+}
+
+.field-wrap input:focus ~ .float-label,
+.field-wrap input:not(:placeholder-shown) ~ .float-label {
+  top: 0;
+  font-size: 11.5px;
+  color: var(--blue);
+  letter-spacing: 0.3px;
+}
+
+input[type="text"],
+input[type="password"] {
+  width: 100%;
+  height: 52px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  color: var(--text);
+  background: transparent;
+  outline: none;
+  transition: border-color 0.18s;
+  letter-spacing: 0.1px;
+}
+input::placeholder { color: transparent; }
+input:hover { border-color: #BDBDBD; }
+input:focus { border-color: var(--border-focus); }
+input.err { border-color: var(--error); }
+input.err:focus { border-color: var(--error); }
+.field-wrap input.err:focus ~ .float-label,
+.field-wrap input.err:not(:placeholder-shown) ~ .float-label {
+  color: var(--error);
+}
+
+/* Toggle eye */
+.eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-light);
+  padding: 6px;
+  display: flex;
+  transition: color 0.15s;
+}
+.eye-btn:hover { color: var(--text-mid); }
+.eye-btn svg {
+  width: 18px; height: 18px;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Error message */
+.err-msg {
+  font-size: 12px;
+  color: var(--error);
+  text-align: left;
+  margin-top: 5px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+}
+.err-msg.show { display: flex; }
+.err-msg svg {
+  width: 13px; height: 13px;
+  stroke: currentColor; fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* Forgot */
+.forgot-row {
+  text-align: right;
+  margin: 6px 0 28px;
+}
+.forgot-row a {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--blue);
+  text-decoration: none;
+}
+.forgot-row a:hover { text-decoration: underline; }
+
+/* Buttons */
+.btn-next {
+  width: 100%;
+  height: 48px;
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.18s, box-shadow 0.18s;
+  letter-spacing: 0.1px;
+}
+.btn-next:hover { background: var(--blue-hover); box-shadow: 0 1px 3px rgba(26,115,232,0.3); }
+.btn-next:active { transform: scale(0.985); }
+.btn-next:disabled { opacity: 0.7; cursor: not-allowed; }
+
+.btn-back {
+  width: 100%;
+  height: 48px;
+  background: transparent;
+  color: var(--blue);
+  border: none;
+  border-radius: 6px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.15s;
+}
+.btn-back:hover { background: var(--blue-light); }
+
+/* Spinner */
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  display: none;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Step transition */
+.step { display: none; }
+.step.active {
+  display: block;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+}
+.divider-line { flex: 1; height: 1px; background: var(--border); }
+.divider-text { font-size: 12px; color: var(--text-light); white-space: nowrap; }
+
+/* User chip (step 2) */
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 14px 6px 8px;
+  margin-bottom: 28px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.user-chip:hover { background: var(--bg); }
+.user-chip-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--navy);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+}
+.user-chip-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.user-chip-arrow {
+  width: 14px; height: 14px;
+  stroke: var(--text-light); fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Success state */
+.success-icon {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: #E6F4EA;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+}
+.success-icon svg {
+  width: 28px; height: 28px;
+  stroke: #1E8E3E; fill: none;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Footer */
+.card-footer-links {
+  margin-top: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card-footer-links a {
+  font-size: 12.5px;
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+.card-footer-links a:hover { text-decoration: underline; }
+
+/* Page footer */
+.page-footer {
+  margin-top: 28px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.page-footer a {
+  font-size: 12px;
+  color: var(--text-light);
+  text-decoration: none;
+}
+.page-footer a:hover { text-decoration: underline; color: var(--text-mid); }
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (max-width: 480px) {
+  .card { padding: 40px 24px; border-radius: 12px; }
+  .topbar { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <a class="topbar-brand" href="#">
+    <div class="topbar-icon">
+      <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M12 15h8M16 15v-2M19 15v-2"/></svg>
+    </div>
+    <span class="topbar-name">Single<span>Sign</span></span>
+  </a>
+</div>
+
+<!-- Card -->
+<div class="card" id="mainCard">
+
+  <!-- STEP 1: Username -->
+  <div class="step active" id="step1">
+    <div class="step-icon">
+      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </div>
+    <h1 class="card-title">Masuk</h1>
+    <p class="card-sub">Gunakan akun organisasi Anda</p>
+
+    <div class="field-wrap">
+      <input type="text" id="uid" placeholder="ID Pengguna atau email" autocomplete="username"
+             oninput="clearErr('uid','uidErr')" onkeydown="if(event.key==='Enter')goStep2()" />
+      <span class="float-label">ID Pengguna atau email</span>
+    </div>
+    <div class="err-msg" id="uidErr">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="uidErrMsg">Masukkan ID Pengguna atau email Anda</span>
+    </div>
+
+    <div style="margin-top:28px;">
+      <button class="btn-next" onclick="goStep2()">
+        <span>Lanjutkan</span>
+        <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+
+    <div class="card-footer-links">
+      <a href="#" onclick="showForgot(event)">Buat akun baru?</a>
+      <a href="#" onclick="showForgot(event)">Butuh bantuan?</a>
+    </div>
+  </div>
+
+  <!-- STEP 2: Password -->
+  <div class="step" id="step2">
+    <div class="step-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1 class="card-title">Selamat datang</h1>
+
+    <div class="user-chip" onclick="goBack()" title="Ganti akun">
+      <div class="user-chip-avatar" id="chipAvatar">A</div>
+      <span class="user-chip-name" id="chipName">—</span>
+      <svg class="user-chip-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+
+    <div class="field-wrap">
+      <input type="password" id="pwd" placeholder="Kata sandi" autocomplete="current-password"
+             oninput="clearErr('pwd','pwdErr')" onkeydown="if(event.key==='Enter')doLogin()" />
+      <span class="float-label">Kata sandi</span>
+      <button class="eye-btn" onclick="togglePw()" type="button" aria-label="Tampilkan kata sandi">
+        <svg id="eyeIcon" viewBox="0 0 24 24">
+          <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+    <div class="err-msg" id="pwdErr">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="pwdErrMsg">Masukkan kata sandi Anda</span>
+    </div>
+
+    <div class="forgot-row"><a href="#" onclick="showForgot(event)">Lupa kata sandi?</a></div>
+
+    <button class="btn-next" id="loginBtn" onclick="doLogin()">
+      <span id="loginLabel">Masuk</span>
+      <div class="spinner" id="spinner"></div>
+    </button>
+    <button class="btn-back" onclick="goBack()">← Kembali</button>
+  </div>
+
+  <!-- STEP 3: Success -->
+  <div class="step" id="step3">
+    <div class="success-icon">
+      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h1 class="card-title">Berhasil masuk</h1>
+    <p class="card-sub" id="successMsg">Mengalihkan ke dasbor…</p>
+    <div style="margin-top:28px">
+      <div style="height:4px;border-radius:4px;background:var(--border);overflow:hidden">
+        <div id="progressBar" style="height:100%;background:var(--blue);width:0%;transition:width 1.8s linear;border-radius:4px"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Page footer -->
+<div class="page-footer">
+  <a href="#">Kebijakan Privasi</a>
+  <a href="#">Ketentuan Layanan</a>
+  <a href="#">Bantuan</a>
+</div>
+
+<script>
+var pwVisible = false;
+var currentUser = '';
+
+function showStep(id) {
+  document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById(id).classList.add('active');
+}
+
+function goStep2() {
+  var uid = document.getElementById('uid');
+  var val = uid.value.trim();
+  if (!val) {
+    uid.classList.add('err');
+    document.getElementById('uidErrMsg').textContent = 'Masukkan ID Pengguna atau email Anda';
+    document.getElementById('uidErr').classList.add('show');
+    uid.focus();
+    return;
+  }
+  currentUser = val;
+  var initials = val.replace(/@.*/, '').split('.').map(function(w){ return w[0] || ''; }).join('').toUpperCase().slice(0,2) || val[0].toUpperCase();
+  document.getElementById('chipAvatar').textContent = initials;
+  document.getElementById('chipName').textContent = val;
+  showStep('step2');
+  setTimeout(function(){ document.getElementById('pwd').focus(); }, 220);
+}
+
+function goBack() {
+  showStep('step1');
+  document.getElementById('pwd').value = '';
+  clearErr('pwd','pwdErr');
+  setTimeout(function(){ document.getElementById('uid').focus(); }, 220);
+}
+
+function doLogin() {
+  var pwd = document.getElementById('pwd');
+  if (!pwd.value) {
+    pwd.classList.add('err');
+    document.getElementById('pwdErrMsg').textContent = 'Masukkan kata sandi Anda';
+    document.getElementById('pwdErr').classList.add('show');
+    pwd.focus();
+    return;
+  }
+
+  var btn     = document.getElementById('loginBtn');
+  var label   = document.getElementById('loginLabel');
+  var spinner = document.getElementById('spinner');
+  btn.disabled = true;
+  label.style.display = 'none';
+  spinner.style.display = 'block';
+
+  fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: currentUser, password: pwd.value })
+  })
+  .then(function(res) { return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
+  .then(function(r) {
+    btn.disabled = false;
+    label.style.display = '';
+    spinner.style.display = 'none';
+
+    if (r.ok) {
+      var name = r.data.username.replace(/@.*/, '').replace(/\./g, ' ');
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+      document.getElementById('successMsg').textContent = 'Halo, ' + name + ' — mengalihkan ke dasbor…';
+      showStep('step3');
+      setTimeout(function(){ document.getElementById('progressBar').style.width = '100%'; }, 60);
+      setTimeout(function(){ window.location.href = '/'; }, 2000);
+    } else {
+      pwd.classList.add('err');
+      document.getElementById('pwdErrMsg').textContent = r.data.error || 'Username atau password salah.';
+      document.getElementById('pwdErr').classList.add('show');
+      document.getElementById('step2').style.animation = 'none';
+      document.getElementById('step2').offsetHeight;
+      document.getElementById('step2').style.animation = 'shake 0.35s ease';
+      pwd.focus();
+    }
+  })
+  .catch(function() {
+    btn.disabled = false;
+    label.style.display = '';
+    spinner.style.display = 'none';
+    pwd.classList.add('err');
+    document.getElementById('pwdErrMsg').textContent = 'Gagal terhubung ke server. Coba lagi.';
+    document.getElementById('pwdErr').classList.add('show');
+  });
+}
+
+function clearErr(inputId, errId) {
+  document.getElementById(inputId).classList.remove('err');
+  document.getElementById(errId).classList.remove('show');
+}
+
+function togglePw() {
+  pwVisible = !pwVisible;
+  var input = document.getElementById('pwd');
+  var icon  = document.getElementById('eyeIcon');
+  input.type = pwVisible ? 'text' : 'password';
+  if (pwVisible) {
+    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
+  } else {
+    icon.innerHTML = '<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>';
+  }
+}
+
+function showForgot(e) {
+  e.preventDefault();
+  alert('Hubungi administrator sistem Anda.');
+}
+
+setTimeout(function(){ document.getElementById('uid').focus(); }, 300);
+</script>
+</body>
+</html>

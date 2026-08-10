@@ -217,6 +217,18 @@ def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_sap_cji3_wbs ON sap_cji3(wbs_element);",
         "CREATE INDEX IF NOT EXISTS idx_sap_cji3_batch ON sap_cji3(upload_batch);",
 
+        # ── Users ─────────────────────────────────────────────────
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id              SERIAL PRIMARY KEY,
+            username        TEXT UNIQUE NOT NULL,
+            hashed_password TEXT NOT NULL,
+            role            TEXT NOT NULL DEFAULT 'user',
+            is_active       INTEGER NOT NULL DEFAULT 1,
+            created_at      TEXT DEFAULT NOW()::TEXT
+        );
+        """,
+
         # ── Control Tower outputs ─────────────────────────────────
         """
         CREATE TABLE IF NOT EXISTS control_tower_outputs (
@@ -426,6 +438,36 @@ def fetch_ct_output_detail(ct_id):
     with db_cursor() as cur:
         cur.execute("SELECT * FROM control_tower_outputs WHERE id=%s", (ct_id,))
         return cur.fetchone()
+
+# ── Users / Auth ─────────────────────────────────────────────────────────────
+def verify_user(username: str, password: str):
+    """Verifikasi username + password. Return dict user atau None."""
+    import hashlib
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, username, hashed_password, role, is_active FROM users WHERE username=%s",
+            (username,)
+        )
+        row = cur.fetchone()
+
+    if not row:
+        return None
+    if not row["is_active"]:
+        return None
+
+    stored = row["hashed_password"]
+    try:
+        salt_hex, dk_hex = stored.split(":", 1)
+    except ValueError:
+        return None
+
+    salt = bytes.fromhex(salt_hex)
+    dk_check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
+    if dk_check.hex() != dk_hex:
+        return None
+
+    return {"id": row["id"], "username": row["username"], "role": row["role"]}
+
 
 def get_sap_data_for_agent():
     """Ambil data SAP yang relevan untuk Control Tower Agent."""
