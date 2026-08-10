@@ -18,8 +18,14 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", os.urandom(32))
+_secret = os.getenv("SECRET_KEY")
+if not _secret:
+    _secret = "reportingagent-default-key-set-SECRET_KEY-in-railway"
+    print("[WARN] SECRET_KEY tidak diset di environment! Set SECRET_KEY di Railway untuk keamanan.")
+app.config['SECRET_KEY'] = _secret
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(analytics_bp)
@@ -32,8 +38,8 @@ def require_login():
     if any(path.startswith(p) for p in PUBLIC_PREFIXES):
         return
     if not session.get("user_id"):
-        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
-            return jsonify({"error": "Unauthorized"}), 401
+        if path.startswith("/api/"):
+            return jsonify({"error": "Unauthorized", "redirect": "/login"}), 401
         return redirect("/login")
 
 try:
