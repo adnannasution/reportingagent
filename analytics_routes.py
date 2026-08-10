@@ -186,7 +186,7 @@ def get_charts():
 
     except Exception as e:
         print(f"[ANALYTICS CHARTS ERROR] {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Terjadi kesalahan saat mengambil data analitik"}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -203,7 +203,7 @@ def analytics_detail():
         sql, params, columns, title = _build_detail_query(source, request.args)
     except Exception as e:
         print(f"[ANALYTICS BUILD QUERY ERROR] {traceback.format_exc()}")
-        return jsonify({"error": f"Query build error: {str(e)}"}), 500
+        return jsonify({"error": "Konfigurasi query tidak valid"}), 500
 
     if not sql:
         return jsonify({"error": f"Unknown source: '{source}'"}), 400
@@ -243,37 +243,8 @@ def analytics_detail():
     except Exception as e:
         print(f"[ANALYTICS DETAIL ERROR] source={source} params={dict(request.args)}")
         print(traceback.format_exc())
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Terjadi kesalahan saat mengambil detail data"}), 500
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Debug endpoint — hapus setelah selesai testing
-# ─────────────────────────────────────────────────────────────────────────────
-@analytics_bp.route("/api/analytics/debug-wo")
-def debug_wo():
-    try:
-        with db_cursor() as cur:
-            cur.execute("""
-                SELECT system_status, user_status, order_type,
-                       basic_fin_date, actual_finish, main_workctr
-                FROM sap_work_orders
-                WHERE system_status IS NOT NULL
-                LIMIT 10
-            """)
-            rows = []
-            for r in cur.fetchall():
-                row = dict(r)
-                for k, v in row.items():
-                    if v is None:
-                        row[k] = None
-                    elif isinstance(v, timedelta):
-                        row[k] = v.days
-                    elif hasattr(v, "isoformat"):
-                        row[k] = v.isoformat()
-                rows.append(row)
-        return jsonify(rows)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────

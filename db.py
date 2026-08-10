@@ -314,7 +314,11 @@ def fetch_talking_points_detail(tp_id):
         return cur.fetchone()
 
 # ── SAP Upload helpers ────────────────────────────────────────────────────────
+_ALLOWED_SAP_TABLES = {"sap_notifications", "sap_work_orders", "sap_bom", "sap_cji3"}
+
 def clear_sap_batch(batch_id: str, table: str):
+    if table not in _ALLOWED_SAP_TABLES:
+        raise ValueError(f"Tabel tidak diizinkan: {table}")
     with db_cursor() as cur:
         if batch_id == "ALL":
             cur.execute(f"TRUNCATE TABLE {table}")

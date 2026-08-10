@@ -121,7 +121,7 @@ def filter_values():
         return jsonify(values)
     except Exception as e:
         print(f"[CUSTOM FILTER VALUES ERROR] {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Gagal mengambil nilai filter"}), 500
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ def build_chart():
                 rows.append(row)
     except Exception as e:
         print(f"[CUSTOM CHART SQL ERROR] {traceback.format_exc()}")
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Gagal memproses data chart"}), 500
 
     # ── Format untuk Chart.js ─────────────────────────────────────────────────
     if group_col:
