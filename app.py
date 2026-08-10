@@ -2,7 +2,7 @@
 app.py — Executive Governance Web App
 """
 
-import os, uuid, tempfile
+import os, uuid, tempfile, hashlib
 from datetime import datetime, timedelta
 from flask import Flask, send_from_directory, request, jsonify, session, redirect
 from dotenv import load_dotenv
@@ -18,11 +18,9 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-_secret = os.getenv("SECRET_KEY")
-if not _secret:
-    _secret = "reportingagent-default-key-set-SECRET_KEY-in-railway"
-    print("[WARN] SECRET_KEY tidak diset di environment! Set SECRET_KEY di Railway untuk keamanan.")
-app.config['SECRET_KEY'] = _secret
+app.config['SECRET_KEY'] = hashlib.sha256(
+    ("reportingagent:" + os.getenv("DATABASE_URL", "local")).encode()
+).hexdigest()
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
