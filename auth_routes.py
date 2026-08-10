@@ -19,8 +19,8 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("user_id"):
-            if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
-                return jsonify({"error": "Unauthorized"}), 401
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Unauthorized", "redirect": "/login"}), 401
             return redirect("/login")
         return f(*args, **kwargs)
     return decorated
