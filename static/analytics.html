@@ -45,6 +45,8 @@ body{font-family:var(--font-body);background:var(--cream);color:var(--ink);line-
 .topbar-title{font-family:var(--font-display);font-size:1.25rem;color:var(--ink)}
 .topbar-right{display:flex;align-items:center;gap:12px}
 .topbar-date{font-size:.78rem;color:var(--ink-3);font-family:var(--font-mono)}
+.logout-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;font-family:var(--font-body);font-size:.75rem;color:var(--ink-3);transition:border-color .15s,color .15s,background .15s}
+.logout-btn:hover{border-color:var(--red);color:var(--red);background:var(--red-bg)}
 .content{padding:28px 32px;flex:1}
 
 /* KPI */
@@ -176,6 +178,10 @@ table.dt tbody td.td-w{white-space:normal;line-height:1.4;font-size:.74rem}
       <div class="topbar-right">
         <span class="topbar-date" id="topbar-date"></span>
         <button class="btn btn-sm btn-outline" onclick="loadCharts()">↺ Refresh</button>
+        <button class="logout-btn" onclick="doLogout()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Keluar
+        </button>
       </div>
     </div>
 
@@ -586,6 +592,7 @@ function goP(tbl,p){const s=S[tbl];if(!s.source||p<1||p>s.pages)return;s.page=p;
 function dC(id){if(CI[id]){CI[id].destroy();delete CI[id];}}
 function fmt(n){return(n||0).toLocaleString('id-ID');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function doLogout(){fetch('/api/auth/logout',{method:'POST'}).finally(function(){window.location.href='/login';});}
 </script>
 </body>
 </html>
