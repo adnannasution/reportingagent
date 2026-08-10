@@ -52,7 +52,8 @@ def api_reports():
         rows = db.fetch_reports(report_type=rtype, limit=100)
         return jsonify([dict(r) for r in rows])
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[REPORTS LIST ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil daftar report"}), 500
 
 @app.route("/api/reports/<int:report_id>")
 def api_report_detail(report_id):
@@ -61,7 +62,8 @@ def api_report_detail(report_id):
         if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[REPORT DETAIL ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil detail report"}), 500
 
 
 # ── API: Generate Reports manual ──────────────────────────────────────────────
@@ -71,7 +73,8 @@ def api_generate_daily():
         content = report_generator.generate_daily()
         return jsonify({"status": "ok", "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[GENERATE DAILY ERROR] {e}")
+        return jsonify({"error": "Gagal membuat laporan harian"}), 500
 
 @app.route("/api/generate/weekly", methods=["POST"])
 def api_generate_weekly():
@@ -79,7 +82,8 @@ def api_generate_weekly():
         content = report_generator.generate_weekly()
         return jsonify({"status": "ok", "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[GENERATE WEEKLY ERROR] {e}")
+        return jsonify({"error": "Gagal membuat laporan mingguan"}), 500
 
 @app.route("/api/generate/monthly", methods=["POST"])
 def api_generate_monthly():
@@ -87,7 +91,8 @@ def api_generate_monthly():
         content = report_generator.generate_monthly()
         return jsonify({"status": "ok", "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[GENERATE MONTHLY ERROR] {e}")
+        return jsonify({"error": "Gagal membuat laporan bulanan"}), 500
 
 
 # ── API: Memos ────────────────────────────────────────────────────────────────
@@ -97,7 +102,8 @@ def api_memos():
         rows = db.fetch_memos(limit=100)
         return jsonify([dict(r) for r in rows])
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[MEMOS LIST ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil daftar memo"}), 500
 
 @app.route("/api/memos/<int:memo_id>")
 def api_memo_detail(memo_id):
@@ -106,16 +112,21 @@ def api_memo_detail(memo_id):
         if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[MEMO DETAIL ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil detail memo"}), 500
 
 @app.route("/api/memos/generate", methods=["POST"])
 def api_generate_memo():
     data = request.json or {}
     report_ids = data.get("report_ids", [])
-    title   = data.get("title", f"Memo Eksekutif {datetime.now().strftime('%d %b %Y')}")
-    context = data.get("context", "")
+    title   = str(data.get("title", f"Memo Eksekutif {datetime.now().strftime('%d %b %Y')}"))[:255]
+    context = str(data.get("context", ""))[:2000]
     if not report_ids:
         return jsonify({"error": "Pilih minimal 1 report sebagai sumber"}), 400
+    if not isinstance(report_ids, list) or len(report_ids) > 20:
+        return jsonify({"error": "report_ids harus berupa list maksimal 20 item"}), 400
+    if not all(isinstance(i, int) for i in report_ids):
+        return jsonify({"error": "report_ids harus berisi angka"}), 400
     try:
         reports = db.fetch_reports_by_ids(report_ids)
         if not reports: return jsonify({"error": "Report tidak ditemukan"}), 404
@@ -123,7 +134,8 @@ def api_generate_memo():
         memo_id = db.save_memo(title, report_ids, content)
         return jsonify({"id": memo_id, "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[MEMO GENERATE ERROR] {e}")
+        return jsonify({"error": "Gagal membuat memo"}), 500
 
 
 # ── API: Talking Points ───────────────────────────────────────────────────────
@@ -133,7 +145,8 @@ def api_talking_points():
         rows = db.fetch_talking_points(limit=100)
         return jsonify([dict(r) for r in rows])
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[TALKING POINTS LIST ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil daftar talking points"}), 500
 
 @app.route("/api/talking-points/<int:tp_id>")
 def api_tp_detail(tp_id):
@@ -142,16 +155,21 @@ def api_tp_detail(tp_id):
         if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[TALKING POINTS DETAIL ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil detail talking points"}), 500
 
 @app.route("/api/talking-points/generate", methods=["POST"])
 def api_generate_tp():
     data = request.json or {}
     report_ids = data.get("report_ids", [])
-    title   = data.get("title", f"Talking Points {datetime.now().strftime('%d %b %Y')}")
-    context = data.get("context", "")
+    title   = str(data.get("title", f"Talking Points {datetime.now().strftime('%d %b %Y')}"))[:255]
+    context = str(data.get("context", ""))[:2000]
     if not report_ids:
         return jsonify({"error": "Pilih minimal 1 report sebagai sumber"}), 400
+    if not isinstance(report_ids, list) or len(report_ids) > 20:
+        return jsonify({"error": "report_ids harus berupa list maksimal 20 item"}), 400
+    if not all(isinstance(i, int) for i in report_ids):
+        return jsonify({"error": "report_ids harus berisi angka"}), 400
     try:
         reports = db.fetch_reports_by_ids(report_ids)
         if not reports: return jsonify({"error": "Report tidak ditemukan"}), 404
@@ -159,7 +177,8 @@ def api_generate_tp():
         tp_id   = db.save_talking_points(title, report_ids, content)
         return jsonify({"id": tp_id, "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[TALKING POINTS GENERATE ERROR] {e}")
+        return jsonify({"error": "Gagal membuat talking points"}), 500
 
 
 # ── API: SAP Upload ───────────────────────────────────────────────────────────
@@ -168,20 +187,26 @@ def api_sap_summary():
     try:
         return jsonify(db.get_sap_summary())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[SAP SUMMARY ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil ringkasan SAP"}), 500
+
+MAX_UPLOAD_FILES = 10
 
 @app.route("/api/sap/upload", methods=["POST"])
 def api_sap_upload():
     files = request.files.getlist("files")
     if not files:
         return jsonify({"error": "Tidak ada file yang diupload"}), 400
+    if len(files) > MAX_UPLOAD_FILES:
+        return jsonify({"error": f"Maksimal {MAX_UPLOAD_FILES} file per upload"}), 400
 
     batch_id    = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + str(uuid.uuid4())[:6]
     upload_mode = request.form.get("mode", "tambah")  # 'tambah' atau 'replace'
+    if upload_mode not in ("tambah", "replace"):
+        upload_mode = "tambah"
     results     = []
 
     # Pre-scan semua file untuk tentukan tipe, lalu truncate sekali di awal
-    tmp_files = []
     parsed_all = []
     has_notif = False
     has_wo    = False
@@ -189,21 +214,27 @@ def api_sap_upload():
     has_cji3  = False
 
     for f in files:
-        if not f.filename.lower().endswith('.xlsx'):
-            results.append({"file": f.filename, "status": "skip", "reason": "Bukan file .xlsx"})
+        safe_name = os.path.basename(f.filename or "")
+        if not safe_name.lower().endswith('.xlsx'):
+            results.append({"file": safe_name, "status": "skip", "reason": "Bukan file .xlsx"})
             continue
         tmp = tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False)
-        f.save(tmp.name)
         try:
+            f.save(tmp.name)
+            tmp.close()
             parsed = sap_parser.parse_file(tmp.name, batch_id)
-            parsed_all.append((f.filename, tmp.name, parsed))
+            parsed_all.append((safe_name, tmp.name, parsed))
             if parsed["type"] == "notification": has_notif = True
             if parsed["type"] == "work_order":   has_wo    = True
             if parsed["type"] == "bom":          has_bom   = True
             if parsed["type"] == "cji3":         has_cji3  = True
         except Exception as e:
-            results.append({"file": f.filename, "status": "error", "reason": str(e)})
-            os.unlink(tmp.name)
+            print(f"[SAP UPLOAD PARSE ERROR] file={safe_name} err={e}")
+            results.append({"file": safe_name, "status": "error", "reason": "Gagal membaca file"})
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
 
     # Truncate hanya kalau mode replace
     if upload_mode == "replace":
@@ -213,7 +244,8 @@ def api_sap_upload():
             if has_bom:   db.clear_sap_batch("ALL", "sap_bom")
             if has_cji3:  db.clear_sap_batch("ALL", "sap_cji3")
         except Exception as e:
-            return jsonify({"error": f"Gagal clear data lama: {str(e)}"}), 500
+            print(f"[SAP UPLOAD CLEAR ERROR] {e}")
+            return jsonify({"error": "Gagal menghapus data lama"}), 500
 
     # Insert semua
     for filename, tmppath, parsed in parsed_all:
@@ -238,9 +270,13 @@ def api_sap_upload():
                 results.append({"file": filename, "status": "skip",
                                  "reason": "Format tidak dikenali"})
         except Exception as e:
-            results.append({"file": filename, "status": "error", "reason": str(e)})
+            print(f"[SAP UPLOAD INSERT ERROR] file={filename} err={e}")
+            results.append({"file": filename, "status": "error", "reason": "Gagal menyimpan data"})
         finally:
-            os.unlink(tmppath)
+            try:
+                os.unlink(tmppath)
+            except OSError:
+                pass
 
     total_ok = sum(1 for r in results if r["status"] == "ok")
     return jsonify({"batch_id": batch_id, "results": results,
@@ -254,7 +290,8 @@ def api_ct_list():
         rows = db.fetch_ct_outputs(limit=50)
         return jsonify([dict(r) for r in rows])
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[CT LIST ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil daftar control tower"}), 500
 
 @app.route("/api/control-tower/<int:ct_id>")
 def api_ct_detail(ct_id):
@@ -263,13 +300,14 @@ def api_ct_detail(ct_id):
         if not row: return jsonify({"error": "Not found"}), 404
         return jsonify(dict(row))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[CT DETAIL ERROR] {e}")
+        return jsonify({"error": "Gagal mengambil detail control tower"}), 500
 
 @app.route("/api/control-tower/generate", methods=["POST"])
 def api_ct_generate():
     data    = request.json or {}
-    context = data.get("context", "")
-    use_daily = data.get("use_daily_report", True)
+    context = str(data.get("context", ""))[:2000]
+    use_daily = bool(data.get("use_daily_report", True))
 
     try:
         sap_data = db.get_sap_data_for_agent()
@@ -299,7 +337,8 @@ def api_ct_generate():
         ct_id = db.save_ct_output("control_tower", title, content)
         return jsonify({"id": ct_id, "content": content})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        print(f"[CT GENERATE ERROR] {e}")
+        return jsonify({"error": "Gagal membuat control tower report"}), 500
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
