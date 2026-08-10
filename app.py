@@ -3,12 +3,13 @@ app.py — Executive Governance Web App
 """
 
 import os, uuid, tempfile
-from datetime import datetime
-from flask import Flask, send_from_directory, request, jsonify
+from datetime import datetime, timedelta
+from flask import Flask, send_from_directory, request, jsonify, session, redirect
 from dotenv import load_dotenv
 import db, agent, report_generator, sap_parser, control_tower_agent
 from analytics_routes import analytics_bp
-from custom_chart_routes import custom_chart_bp   
+from custom_chart_routes import custom_chart_bp
+from auth_routes import auth_bp, PUBLIC_PREFIXES
 
 load_dotenv()
 
@@ -17,8 +18,23 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-app.register_blueprint(analytics_bp)  
-app.register_blueprint(custom_chart_bp) 
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", os.urandom(32))
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(analytics_bp)
+app.register_blueprint(custom_chart_bp)
+
+
+@app.before_request
+def require_login():
+    path = request.path
+    if any(path.startswith(p) for p in PUBLIC_PREFIXES):
+        return
+    if not session.get("user_id"):
+        if request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html:
+            return jsonify({"error": "Unauthorized"}), 401
+        return redirect("/login")
 
 try:
     db.run_migrations()
