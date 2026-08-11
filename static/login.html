@@ -1,617 +1,534 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SingleSign — Masuk</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SingleSign</title>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
-:root {
-  --blue:       #1A73E8;
-  --blue-hover: #1557B0;
-  --blue-light: #E8F0FE;
-  --navy:       #1B2B4B;
-  --text:       #202124;
-  --text-mid:   #5F6368;
-  --text-light: #80868B;
-  --border:     #DADCE0;
-  --border-focus: #1A73E8;
-  --white:      #FFFFFF;
-  --bg:         #F8F9FA;
-  --error:      #D93025;
-  --radius:     8px;
-}
-
-html, body { height: 100%; }
-
-body {
-  font-family: 'Inter', 'Google Sans', sans-serif;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 24px 16px;
+:root{
+  --bg:       #F5F5F5;
+  --surface:  #FFFFFF;
+  --border:   #E4E4E7;
+  --border-2: #D4D4D8;
+  --text-1:   #09090B;
+  --text-2:   #52525B;
+  --text-3:   #A1A1AA;
+  --accent:   #18181B;
+  --accent-h: #3F3F46;
+  --green:    #16A34A;
+  --red:      #DC2626;
+  --focus:    #18181B;
+  --focus-r:  rgba(24,24,27,0.08);
+  --r:        8px;
 }
 
-/* Top bar brand */
-.topbar {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  height: 64px;
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  background: var(--white);
-  border-bottom: 1px solid var(--border);
+html,body{height:100%;}
+
+body{
+  font-family:'Geist','Inter',sans-serif;
+  background:var(--bg);
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:72px 16px 48px;
 }
 
-.topbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  text-decoration: none;
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.032) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,0,0,0.032) 1px,transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
 }
 
-.topbar-icon {
-  width: 32px; height: 32px;
-  border-radius: 8px;
-  background: var(--navy);
-  display: flex; align-items: center; justify-content: center;
-}
-.topbar-icon svg {
-  width: 17px; height: 17px;
-  stroke: white; fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+/* ── Topbar ── */
+.bar{
+  position:fixed;top:0;left:0;right:0;
+  height:56px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  z-index:10;
 }
 
-.topbar-name {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text);
-  letter-spacing: -0.3px;
+.brand{display:flex;align-items:center;gap:8px;text-decoration:none;}
+.brand-sq{
+  width:28px;height:28px;border-radius:6px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
 }
-.topbar-name span { color: var(--blue); }
-
-/* Card */
-.card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 48px 44px;
-  width: 100%;
-  max-width: 420px;
-  text-align: center;
+.brand-sq svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.brand-lbl{
+  font-size:15px;font-weight:600;color:var(--text-1);
+  letter-spacing:-0.4px;
 }
 
-/* Step icon */
-.step-icon {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  background: var(--blue-light);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
+.bar-right{
+  font-family:'Geist Mono',monospace;
+  font-size:11px;color:var(--text-3);
+  display:flex;align-items:center;gap:6px;
 }
-.step-icon svg {
-  width: 24px; height: 24px;
-  stroke: var(--blue); fill: none;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.bar-dot{width:6px;height:6px;border-radius:50%;background:#22C55E;box-shadow:0 0 6px #22C55E;}
+
+/* ── Card ── */
+.card{
+  position:relative;z-index:1;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:12px;
+  width:100%;max-width:400px;
+  overflow:hidden;
+  box-shadow:
+    0 1px 2px rgba(0,0,0,0.04),
+    0 4px 8px rgba(0,0,0,0.04),
+    0 12px 24px rgba(0,0,0,0.04);
 }
 
-.card-title {
-  font-size: 24px;
-  font-weight: 500;
-  color: var(--text);
-  letter-spacing: -0.3px;
-  margin-bottom: 8px;
-  line-height: 1.2;
+.card-stripe{
+  height:3px;
+  background:var(--accent);
+  width:100%;
 }
 
-.card-sub {
-  font-size: 14px;
-  color: var(--text-mid);
-  line-height: 1.6;
-  margin-bottom: 32px;
-}
-.card-sub strong { color: var(--text); font-weight: 500; }
-
-/* Input */
-.field-wrap {
-  position: relative;
-  margin-bottom: 8px;
-  text-align: left;
+.card-inner{
+  padding:36px 36px 28px;
 }
 
-.float-label {
-  position: absolute;
-  left: 13px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 15px;
-  color: var(--text-light);
-  pointer-events: none;
-  transition: all 0.18s ease;
-  background: var(--white);
-  padding: 0 3px;
-  letter-spacing: 0.1px;
+/* Icon */
+.icon-wrap{
+  width:44px;height:44px;border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:20px;
+}
+.icon-wrap svg{width:22px;height:22px;stroke:var(--text-1);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}
+
+.card-title{
+  font-size:20px;font-weight:600;
+  color:var(--text-1);letter-spacing:-0.5px;
+  line-height:1.2;margin-bottom:4px;
+}
+.card-sub{
+  font-size:13px;color:var(--text-2);
+  line-height:1.5;margin-bottom:28px;font-weight:400;
 }
 
-.field-wrap input:focus ~ .float-label,
-.field-wrap input:not(:placeholder-shown) ~ .float-label {
-  top: 0;
-  font-size: 11.5px;
-  color: var(--blue);
-  letter-spacing: 0.3px;
+/* ── Input ── */
+.field{margin-bottom:14px;}
+
+.field-lbl{
+  display:block;
+  font-size:12px;font-weight:500;
+  color:var(--text-2);
+  margin-bottom:6px;letter-spacing:0.1px;
 }
 
-input[type="text"],
-input[type="password"] {
-  width: 100%;
-  height: 52px;
-  padding: 0 14px;
-  border: 1.5px solid var(--border);
-  border-radius: var(--radius);
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  color: var(--text);
-  background: transparent;
-  outline: none;
-  transition: border-color 0.18s;
-  letter-spacing: 0.1px;
-}
-input::placeholder { color: transparent; }
-input:hover { border-color: #BDBDBD; }
-input:focus { border-color: var(--border-focus); }
-input.err { border-color: var(--error); }
-input.err:focus { border-color: var(--error); }
-.field-wrap input.err:focus ~ .float-label,
-.field-wrap input.err:not(:placeholder-shown) ~ .float-label {
-  color: var(--error);
-}
+.input-box{position:relative;}
 
-/* Toggle eye */
-.eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-light);
-  padding: 6px;
-  display: flex;
-  transition: color 0.15s;
+input[type=text],
+input[type=password]{
+  width:100%;height:40px;
+  padding:0 38px 0 12px;
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  font-family:'Geist','Inter',sans-serif;
+  font-size:14px;font-weight:400;
+  color:var(--text-1);
+  background:var(--surface);
+  outline:none;
+  transition:border-color 0.15s,box-shadow 0.15s;
+  -webkit-appearance:none;
 }
-.eye-btn:hover { color: var(--text-mid); }
-.eye-btn svg {
-  width: 18px; height: 18px;
-  stroke: currentColor; fill: none;
-  stroke-width: 1.75;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+input::placeholder{color:var(--text-3);font-weight:300;}
+input:hover{border-color:var(--border-2);}
+input:focus{
+  border-color:var(--focus);
+  box-shadow:0 0 0 3px var(--focus-r);
 }
+input.err{border-color:var(--red)!important;box-shadow:0 0 0 3px rgba(220,38,38,0.08)!important;}
 
-/* Error message */
-.err-msg {
-  font-size: 12px;
-  color: var(--error);
-  text-align: left;
-  margin-top: 5px;
-  display: none;
-  align-items: center;
-  gap: 4px;
+/* Eye */
+.eye{
+  position:absolute;right:10px;top:50%;transform:translateY(-50%);
+  background:none;border:none;cursor:pointer;
+  color:var(--text-3);display:flex;padding:4px;border-radius:4px;
+  transition:color 0.12s,background 0.12s;
 }
-.err-msg.show { display: flex; }
-.err-msg svg {
-  width: 13px; height: 13px;
-  stroke: currentColor; fill: none;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  flex-shrink: 0;
-}
+.eye:hover{color:var(--text-2);background:var(--bg);}
+.eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;}
 
-/* Forgot */
-.forgot-row {
-  text-align: right;
-  margin: 6px 0 28px;
+/* Error */
+.err-txt{
+  font-size:11.5px;color:var(--red);
+  margin-top:5px;display:none;align-items:center;gap:4px;
+  font-weight:400;
 }
-.forgot-row a {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--blue);
-  text-decoration: none;
-}
-.forgot-row a:hover { text-decoration: underline; }
+.err-txt.on{display:flex;}
+.err-txt svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0;}
 
-/* Buttons */
-.btn-next {
-  width: 100%;
-  height: 48px;
-  background: var(--blue);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.18s, box-shadow 0.18s;
-  letter-spacing: 0.1px;
+/* Forgot row */
+.btw{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:6px;
 }
-.btn-next:hover { background: var(--blue-hover); box-shadow: 0 1px 3px rgba(26,115,232,0.3); }
-.btn-next:active { transform: scale(0.985); }
-.btn-next:disabled { opacity: 0.7; cursor: not-allowed; }
+.btw .field-lbl{margin-bottom:0;}
+.link{font-size:12px;font-weight:500;color:var(--text-2);text-decoration:none;transition:color 0.12s;}
+.link:hover{color:var(--text-1);}
 
-.btn-back {
-  width: 100%;
-  height: 48px;
-  background: transparent;
-  color: var(--blue);
-  border: none;
-  border-radius: 6px;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 8px;
-  transition: background 0.15s;
+/* ── Submit ── */
+.btn{
+  width:100%;height:40px;
+  background:var(--accent);
+  color:#fff;border:none;
+  border-radius:var(--r);
+  font-family:'Geist','Inter',sans-serif;
+  font-size:14px;font-weight:500;
+  letter-spacing:-0.1px;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+  transition:background 0.15s,transform 0.08s;
+  position:relative;overflow:hidden;
+  margin-top:4px;
 }
-.btn-back:hover { background: var(--blue-light); }
+.btn:hover{background:var(--accent-h);}
+.btn:active{transform:scale(0.985);}
+.btn:disabled{opacity:0.6;cursor:not-allowed;transform:none;}
+
+.btn-icon{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform 0.18s;opacity:0.7;}
+.btn:hover .btn-icon{transform:translateX(2px);opacity:1;}
 
 /* Spinner */
-.spinner {
-  width: 18px; height: 18px;
-  border: 2px solid rgba(255,255,255,0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.6s linear infinite;
-  display: none;
+.spin{
+  width:16px;height:16px;
+  border:1.5px solid rgba(255,255,255,0.25);
+  border-top-color:#fff;
+  border-radius:50%;
+  animation:rot 0.55s linear infinite;
+  display:none;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes rot{to{transform:rotate(360deg);}}
+
+/* Back */
+.btn-ghost{
+  width:100%;height:38px;
+  background:transparent;border:1px solid var(--border);
+  border-radius:var(--r);
+  font-family:'Geist','Inter',sans-serif;
+  font-size:13px;font-weight:500;color:var(--text-2);
+  cursor:pointer;margin-top:8px;
+  transition:background 0.12s,border-color 0.12s,color 0.12s;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-ghost:hover{background:var(--bg);border-color:var(--border-2);color:var(--text-1);}
+.btn-ghost svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* User chip */
+.chip{
+  display:inline-flex;align-items:center;gap:8px;
+  border:1px solid var(--border);border-radius:var(--r);
+  padding:6px 10px;margin-bottom:20px;
+  cursor:pointer;background:var(--bg);
+  transition:background 0.12s,border-color 0.12s;
+  text-align:left;
+}
+.chip:hover{background:#EBEBEB;border-color:var(--border-2);}
+.av{
+  width:26px;height:26px;border-radius:6px;
+  background:var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  font-size:10.5px;font-weight:600;color:#fff;letter-spacing:0.3px;flex-shrink:0;
+  font-family:'Geist Mono',monospace;
+}
+.chip-info{display:flex;flex-direction:column;gap:1px;}
+.chip-hint{font-size:10px;color:var(--text-3);font-weight:400;}
+.chip-name{font-size:13px;font-weight:500;color:var(--text-1);}
+.chip-chev{width:13px;height:13px;stroke:var(--text-3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;margin-left:2px;}
+
+/* Card footer */
+.card-foot{
+  border-top:1px solid var(--border);
+  padding:14px 36px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.foot-stat{
+  display:flex;align-items:center;gap:6px;
+  font-family:'Geist Mono',monospace;
+  font-size:10.5px;color:var(--text-3);
+}
+.foot-stat-dot{width:5px;height:5px;border-radius:50%;background:#22C55E;}
+.foot-ver{
+  font-family:'Geist Mono',monospace;
+  font-size:10.5px;color:var(--text-3);
+}
+
+/* Success */
+.ok-icon{
+  width:48px;height:48px;border-radius:10px;
+  border:1px solid #BBF7D0;background:#F0FDF4;
+  display:flex;align-items:center;justify-content:center;margin-bottom:20px;
+}
+.ok-icon svg{width:24px;height:24px;stroke:#16A34A;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+.prog-track{height:2px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:28px;}
+.prog-fill{height:100%;background:var(--accent);width:0%;transition:width 2s linear;border-radius:2px;}
 
 /* Step transition */
-.step { display: none; }
-.step.active {
-  display: block;
-  animation: fadeIn 0.2s ease;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+.step{display:none;}
+.step.on{display:block;animation:up 0.22s cubic-bezier(0.22,1,0.36,1);}
+@keyframes up{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 
-/* Divider */
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 24px 0;
+@keyframes shake{
+  0%,100%{transform:translateX(0);}
+  20%{transform:translateX(-6px);}
+  40%{transform:translateX(6px);}
+  60%{transform:translateX(-4px);}
+  80%{transform:translateX(3px);}
 }
-.divider-line { flex: 1; height: 1px; background: var(--border); }
-.divider-text { font-size: 12px; color: var(--text-light); white-space: nowrap; }
-
-/* User chip (step 2) */
-.user-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 100px;
-  padding: 6px 14px 6px 8px;
-  margin-bottom: 28px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.user-chip:hover { background: var(--bg); }
-.user-chip-avatar {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: var(--navy);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
-}
-.user-chip-name { font-size: 13.5px; font-weight: 500; color: var(--text); }
-.user-chip-arrow {
-  width: 14px; height: 14px;
-  stroke: var(--text-light); fill: none;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Success state */
-.success-icon {
-  width: 60px; height: 60px;
-  border-radius: 50%;
-  background: #E6F4EA;
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto 20px;
-}
-.success-icon svg {
-  width: 28px; height: 28px;
-  stroke: #1E8E3E; fill: none;
-  stroke-width: 2.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* Footer */
-.card-footer-links {
-  margin-top: 32px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.card-footer-links a {
-  font-size: 12.5px;
-  color: var(--blue);
-  text-decoration: none;
-  font-weight: 500;
-}
-.card-footer-links a:hover { text-decoration: underline; }
 
 /* Page footer */
-.page-footer {
-  margin-top: 28px;
-  display: flex;
-  gap: 20px;
-  align-items: center;
+.pg-foot{
+  position:relative;z-index:1;
+  margin-top:24px;
+  display:flex;gap:16px;align-items:center;
 }
-.page-footer a {
-  font-size: 12px;
-  color: var(--text-light);
-  text-decoration: none;
+.pg-foot a{
+  font-size:11.5px;color:var(--text-3);text-decoration:none;
+  transition:color 0.12s;font-weight:400;
 }
-.page-footer a:hover { text-decoration: underline; color: var(--text-mid); }
+.pg-foot a:hover{color:var(--text-2);}
 
-@keyframes shake {
-  0%,100% { transform: translateX(0); }
-  20% { transform: translateX(-6px); }
-  40% { transform: translateX(6px); }
-  60% { transform: translateX(-4px); }
-  80% { transform: translateX(3px); }
-}
-
-@media (max-width: 480px) {
-  .card { padding: 40px 24px; border-radius: 12px; }
-  .topbar { padding: 0 16px; }
+@media(max-width:460px){
+  .card-inner,.card-foot{padding-left:24px;padding-right:24px;}
+  .bar{padding:0 16px;}
 }
 </style>
 </head>
 <body>
 
-<!-- Top bar -->
-<div class="topbar">
-  <a class="topbar-brand" href="#">
-    <div class="topbar-icon">
-      <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M12 15h8M16 15v-2M19 15v-2"/></svg>
+<!-- Topbar -->
+<div class="bar">
+  <a class="brand" href="#">
+    <div class="brand-sq">
+      <svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.5"/><path d="M11.5 15H20M16.5 15v-2.5M19.5 15v-2.5"/></svg>
     </div>
-    <span class="topbar-name">Single<span>Sign</span></span>
+    <span class="brand-lbl">SingleSign</span>
   </a>
+  <div class="bar-right">
+    <div class="bar-dot"></div>
+    All systems operational
+  </div>
 </div>
 
 <!-- Card -->
-<div class="card" id="mainCard">
+<div class="card">
+  <div class="card-stripe"></div>
+  <div class="card-inner">
 
-  <!-- STEP 1: Username -->
-  <div class="step active" id="step1">
-    <div class="step-icon">
-      <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-    </div>
-    <h1 class="card-title">Masuk</h1>
-    <p class="card-sub">Gunakan akun organisasi Anda</p>
+    <!-- Step 1 -->
+    <div class="step on" id="s1">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+      <h1 class="card-title">Masuk</h1>
+      <p class="card-sub">Gunakan akun organisasi Anda untuk melanjutkan ke SingleSign.</p>
 
-    <div class="field-wrap">
-      <input type="text" id="uid" placeholder="ID Pengguna atau email" autocomplete="username"
-             oninput="clearErr('uid','uidErr')" onkeydown="if(event.key==='Enter')goStep2()" />
-      <span class="float-label">ID Pengguna atau email</span>
-    </div>
-    <div class="err-msg" id="uidErr">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="uidErrMsg">Masukkan ID Pengguna atau email Anda</span>
-    </div>
+      <div class="field">
+        <label class="field-lbl" for="uid">Email atau ID Pengguna</label>
+        <div class="input-box">
+          <input type="text" id="uid" placeholder="nama@perusahaan.com"
+            autocomplete="username"
+            oninput="ce('uid','uE')"
+            onkeydown="if(event.key==='Enter')go2()"/>
+        </div>
+        <div class="err-txt" id="uE">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Masukkan email atau ID Pengguna Anda
+        </div>
+      </div>
 
-    <div style="margin-top:28px;">
-      <button class="btn-next" onclick="goStep2()">
+      <button class="btn" onclick="go2()">
         <span>Lanjutkan</span>
-        <svg style="width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
+        <svg class="btn-icon" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>
       </button>
-    </div>
 
-    <div class="card-footer-links">
-      <a href="#" onclick="showForgot(event)">Buat akun baru?</a>
-      <a href="#" onclick="showForgot(event)">Butuh bantuan?</a>
-    </div>
-  </div>
-
-  <!-- STEP 2: Password -->
-  <div class="step" id="step2">
-    <div class="step-icon">
-      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-    </div>
-    <h1 class="card-title">Selamat datang</h1>
-
-    <div class="user-chip" onclick="goBack()" title="Ganti akun">
-      <div class="user-chip-avatar" id="chipAvatar">A</div>
-      <span class="user-chip-name" id="chipName">—</span>
-      <svg class="user-chip-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-
-    <div class="field-wrap">
-      <input type="password" id="pwd" placeholder="Kata sandi" autocomplete="current-password"
-             oninput="clearErr('pwd','pwdErr')" onkeydown="if(event.key==='Enter')doLogin()" />
-      <span class="float-label">Kata sandi</span>
-      <button class="eye-btn" onclick="togglePw()" type="button" aria-label="Tampilkan kata sandi">
-        <svg id="eyeIcon" viewBox="0 0 24 24">
-          <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </button>
-    </div>
-    <div class="err-msg" id="pwdErr">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <span id="pwdErrMsg">Masukkan kata sandi Anda</span>
-    </div>
-
-    <div class="forgot-row"><a href="#" onclick="showForgot(event)">Lupa kata sandi?</a></div>
-
-    <button class="btn-next" id="loginBtn" onclick="doLogin()">
-      <span id="loginLabel">Masuk</span>
-      <div class="spinner" id="spinner"></div>
-    </button>
-    <button class="btn-back" onclick="goBack()">← Kembali</button>
-  </div>
-
-  <!-- STEP 3: Success -->
-  <div class="step" id="step3">
-    <div class="success-icon">
-      <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    </div>
-    <h1 class="card-title">Berhasil masuk</h1>
-    <p class="card-sub" id="successMsg">Mengalihkan ke dasbor…</p>
-    <div style="margin-top:28px">
-      <div style="height:4px;border-radius:4px;background:var(--border);overflow:hidden">
-        <div id="progressBar" style="height:100%;background:var(--blue);width:0%;transition:width 1.8s linear;border-radius:4px"></div>
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;">
+        <a class="link" href="#" onclick="inf(event,'Hubungi administrator untuk membuat akun.')">Buat akun baru</a>
+        <a class="link" href="#" onclick="inf(event,'Hubungi tim IT untuk bantuan akses.')">Bantuan</a>
       </div>
     </div>
+
+    <!-- Step 2 -->
+    <div class="step" id="s2">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+      <h1 class="card-title">Masukkan kata sandi</h1>
+
+      <button class="chip" onclick="go1()" id="chip">
+        <div class="av" id="av">—</div>
+        <div class="chip-info">
+          <span class="chip-hint">Masuk sebagai</span>
+          <span class="chip-name" id="cn">—</span>
+        </div>
+        <svg class="chip-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
+      <div class="field">
+        <div class="btw">
+          <label class="field-lbl" for="pwd">Kata Sandi</label>
+          <a class="link" href="#" onclick="inf(event,'Hubungi administrator untuk mereset kata sandi Anda.')">Lupa kata sandi?</a>
+        </div>
+        <div class="input-box">
+          <input type="password" id="pwd" placeholder="••••••••"
+            autocomplete="current-password"
+            oninput="ce('pwd','pE')"
+            onkeydown="if(event.key==='Enter')login()"/>
+          <button class="eye" onclick="toggleEye()" type="button" aria-label="Tampilkan">
+            <svg id="eyeIco" viewBox="0 0 24 24">
+              <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="err-txt" id="pE">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span id="pET">Masukkan kata sandi Anda</span>
+        </div>
+      </div>
+
+      <button class="btn" id="lb" onclick="login()">
+        <span id="ll">Masuk</span>
+        <div class="spin" id="sp"></div>
+      </button>
+      <button class="btn-ghost" onclick="go1()">
+        <svg viewBox="0 0 24 24"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        Ganti akun
+      </button>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="step" id="s3">
+      <div class="ok-icon">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h1 class="card-title">Berhasil masuk</h1>
+      <p class="card-sub" id="okSub">Mengarahkan ke dasbor…</p>
+      <div class="prog-track"><div class="prog-fill" id="pf"></div></div>
+    </div>
+
   </div>
 
+  <div class="card-foot">
+    <div class="foot-stat">
+      <div class="foot-stat-dot"></div>
+      Terenkripsi &amp; aman
+    </div>
+    <span class="foot-ver">v2.5.0</span>
+  </div>
 </div>
 
-<!-- Page footer -->
-<div class="page-footer">
-  <a href="#">Kebijakan Privasi</a>
-  <a href="#">Ketentuan Layanan</a>
-  <a href="#">Bantuan</a>
+<div class="pg-foot">
+  <a href="#">Privasi</a>
+  <a href="#">Ketentuan</a>
+  <a href="#">Status</a>
+  <a href="#">Dokumentasi</a>
 </div>
 
 <script>
-var pwVisible = false;
-var currentUser = '';
+var vis=false, usr='';
 
-function showStep(id) {
-  document.querySelectorAll('.step').forEach(function(s) { s.classList.remove('active'); });
-  document.getElementById(id).classList.add('active');
+function show(id){
+  ['s1','s2','s3'].forEach(function(s){document.getElementById(s).classList.remove('on');});
+  document.getElementById(id).classList.add('on');
 }
 
-function goStep2() {
-  var uid = document.getElementById('uid');
-  var val = uid.value.trim();
-  if (!val) {
-    uid.classList.add('err');
-    document.getElementById('uidErrMsg').textContent = 'Masukkan ID Pengguna atau email Anda';
-    document.getElementById('uidErr').classList.add('show');
-    uid.focus();
-    return;
+function go2(){
+  var el=document.getElementById('uid'), v=el.value.trim();
+  if(!v){el.classList.add('err');document.getElementById('uE').classList.add('on');el.focus();return;}
+  usr=v;
+  var ini=v.replace(/@.*/,'').split(/[.\-_]/).map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2)||v[0].toUpperCase();
+  document.getElementById('av').textContent=ini;
+  document.getElementById('cn').textContent=v;
+  show('s2');
+  setTimeout(function(){document.getElementById('pwd').focus();},220);
+}
+
+function go1(){
+  show('s1');
+  document.getElementById('pwd').value='';
+  ce('pwd','pE');
+  setTimeout(function(){document.getElementById('uid').focus();},220);
+}
+
+function login(){
+  var el=document.getElementById('pwd');
+  if(!el.value){
+    el.classList.add('err');
+    document.getElementById('pET').textContent='Masukkan kata sandi Anda';
+    document.getElementById('pE').classList.add('on');
+    el.focus();return;
   }
-  currentUser = val;
-  var initials = val.replace(/@.*/, '').split('.').map(function(w){ return w[0] || ''; }).join('').toUpperCase().slice(0,2) || val[0].toUpperCase();
-  document.getElementById('chipAvatar').textContent = initials;
-  document.getElementById('chipName').textContent = val;
-  showStep('step2');
-  setTimeout(function(){ document.getElementById('pwd').focus(); }, 220);
-}
+  var btn=document.getElementById('lb'),lbl=document.getElementById('ll'),sp=document.getElementById('sp');
+  btn.disabled=true;lbl.style.display='none';sp.style.display='block';
 
-function goBack() {
-  showStep('step1');
-  document.getElementById('pwd').value = '';
-  clearErr('pwd','pwdErr');
-  setTimeout(function(){ document.getElementById('uid').focus(); }, 220);
-}
-
-function doLogin() {
-  var pwd = document.getElementById('pwd');
-  if (!pwd.value) {
-    pwd.classList.add('err');
-    document.getElementById('pwdErrMsg').textContent = 'Masukkan kata sandi Anda';
-    document.getElementById('pwdErr').classList.add('show');
-    pwd.focus();
-    return;
-  }
-
-  var btn     = document.getElementById('loginBtn');
-  var label   = document.getElementById('loginLabel');
-  var spinner = document.getElementById('spinner');
-  btn.disabled = true;
-  label.style.display = 'none';
-  spinner.style.display = 'block';
-
-  fetch('/api/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: currentUser, password: pwd.value })
+  fetch('/api/auth/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({username:usr,password:el.value})
   })
-  .then(function(res) { return res.json().then(function(d){ return { ok: res.ok, data: d }; }); })
-  .then(function(r) {
-    btn.disabled = false;
-    label.style.display = '';
-    spinner.style.display = 'none';
-
-    if (r.ok) {
-      var name = r.data.username.replace(/@.*/, '').replace(/\./g, ' ');
-      name = name.charAt(0).toUpperCase() + name.slice(1);
-      document.getElementById('successMsg').textContent = 'Halo, ' + name + ' — mengalihkan ke dasbor…';
-      showStep('step3');
-      setTimeout(function(){ document.getElementById('progressBar').style.width = '100%'; }, 60);
-      setTimeout(function(){ window.location.href = '/'; }, 2000);
+  .then(function(r){return r.json().then(function(d){return{ok:r.ok,data:d};});})
+  .then(function(r){
+    btn.disabled=false;lbl.style.display='';sp.style.display='none';
+    if(r.ok){
+      var name=usr.replace(/@.*/,'').split(/[.\-_]/).map(function(w){return w.charAt(0).toUpperCase()+w.slice(1);}).join(' ');
+      document.getElementById('okSub').textContent='Halo '+name+' — mengarahkan ke dasbor…';
+      show('s3');
+      setTimeout(function(){document.getElementById('pf').style.width='100%';},60);
+      setTimeout(function(){window.location.href='/';},2100);
     } else {
-      pwd.classList.add('err');
-      document.getElementById('pwdErrMsg').textContent = r.data.error || 'Username atau password salah.';
-      document.getElementById('pwdErr').classList.add('show');
-      document.getElementById('step2').style.animation = 'none';
-      document.getElementById('step2').offsetHeight;
-      document.getElementById('step2').style.animation = 'shake 0.35s ease';
-      pwd.focus();
+      el.classList.add('err');
+      document.getElementById('pET').textContent=r.data.error||'Email atau kata sandi salah.';
+      document.getElementById('pE').classList.add('on');
+      var s2=document.getElementById('s2');
+      s2.style.animation='none';s2.offsetHeight;s2.style.animation='shake 0.3s ease';
+      el.focus();
     }
   })
-  .catch(function() {
-    btn.disabled = false;
-    label.style.display = '';
-    spinner.style.display = 'none';
-    pwd.classList.add('err');
-    document.getElementById('pwdErrMsg').textContent = 'Gagal terhubung ke server. Coba lagi.';
-    document.getElementById('pwdErr').classList.add('show');
+  .catch(function(){
+    btn.disabled=false;lbl.style.display='';sp.style.display='none';
+    el.classList.add('err');
+    document.getElementById('pET').textContent='Gagal terhubung ke server. Coba lagi.';
+    document.getElementById('pE').classList.add('on');
   });
 }
 
-function clearErr(inputId, errId) {
-  document.getElementById(inputId).classList.remove('err');
-  document.getElementById(errId).classList.remove('show');
+function ce(i,e){
+  document.getElementById(i).classList.remove('err');
+  document.getElementById(e).classList.remove('on');
 }
 
-function togglePw() {
-  pwVisible = !pwVisible;
-  var input = document.getElementById('pwd');
-  var icon  = document.getElementById('eyeIcon');
-  input.type = pwVisible ? 'text' : 'password';
-  if (pwVisible) {
-    icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>';
-  } else {
-    icon.innerHTML = '<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>';
-  }
+function toggleEye(){
+  vis=!vis;
+  var i=document.getElementById('pwd'),ico=document.getElementById('eyeIco');
+  i.type=vis?'text':'password';
+  ico.innerHTML=vis
+    ?'<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+    :'<path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>';
 }
 
-function showForgot(e) {
-  e.preventDefault();
-  alert('Hubungi administrator sistem Anda.');
-}
+function inf(e,m){e.preventDefault();alert(m);}
 
-setTimeout(function(){ document.getElementById('uid').focus(); }, 300);
+setTimeout(function(){document.getElementById('uid').focus();},300);
 </script>
 </body>
 </html>
