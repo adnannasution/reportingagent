@@ -592,7 +592,12 @@ function goP(tbl,p){const s=S[tbl];if(!s.source||p<1||p>s.pages)return;s.page=p;
 function dC(id){if(CI[id]){CI[id].destroy();delete CI[id];}}
 function fmt(n){return(n||0).toLocaleString('id-ID');}
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function doLogout(){fetch('/api/auth/logout',{method:'POST'}).finally(function(){window.location.href='/login';});}
+function doLogout(){
+  fetch('/api/auth/logout',{method:'POST'})
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(data){ window.location.href = data.redirect || '/login'; })
+    .catch(function(){ window.location.href = '/login'; });
+}
 </script>
 </body>
 </html>

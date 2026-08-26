@@ -607,7 +607,9 @@ function esc(s) {
 
 function doLogout() {
   fetch('/api/auth/logout', { method: 'POST' })
-    .finally(function() { window.location.href = '/login'; });
+    .then(function(r){ return r.json().catch(function(){ return {}; }); })
+    .then(function(data){ window.location.href = data.redirect || '/login'; })
+    .catch(function(){ window.location.href = '/login'; });
 }
 </script>
 </body>
