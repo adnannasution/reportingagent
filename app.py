@@ -4,12 +4,12 @@ app.py — Executive Governance Web App
 
 import os, uuid, tempfile, hashlib
 from datetime import datetime, timedelta
-from flask import Flask, send_from_directory, request, jsonify, session, redirect
+from flask import Flask, send_from_directory, request, jsonify, redirect
 from dotenv import load_dotenv
 import db, agent, report_generator, sap_parser, control_tower_agent
 from analytics_routes import analytics_bp
 from custom_chart_routes import custom_chart_bp
-from auth_routes import auth_bp, PUBLIC_PREFIXES
+from auth_routes import auth_bp, PUBLIC_PREFIXES, _current_user, _bootstrap_sso_session, _sso_login_redirect
 
 load_dotenv()
 
@@ -35,10 +35,11 @@ def require_login():
     path = request.path
     if any(path.startswith(p) for p in PUBLIC_PREFIXES):
         return
-    if not session.get("user_id"):
-        if path.startswith("/api/"):
-            return jsonify({"error": "Unauthorized", "redirect": "/login"}), 401
-        return redirect("/login")
+    if _current_user() or _bootstrap_sso_session():
+        return
+    if path.startswith("/api/"):
+        return jsonify({"error": "Unauthorized", "redirect": "/login"}), 401
+    return redirect(_sso_login_redirect())
 
 try:
     db.run_migrations()

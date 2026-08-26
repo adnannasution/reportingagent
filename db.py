@@ -469,6 +469,18 @@ def verify_user(username: str, password: str):
     return {"id": row["id"], "username": row["username"], "role": row["role"]}
 
 
+def get_user_by_username(username: str):
+    """Ambil user by username, tanpa cek password — dipakai untuk bootstrap SSO
+    (identitas sudah diverifikasi lewat token dari central login)."""
+    with db_cursor() as cur:
+        cur.execute(
+            "SELECT id, username, role, is_active FROM users WHERE username=%s",
+            (username,)
+        )
+        row = cur.fetchone()
+    return dict(row) if row else None
+
+
 def get_sap_data_for_agent():
     """Ambil data SAP yang relevan untuk Control Tower Agent."""
     with db_cursor() as cur:
