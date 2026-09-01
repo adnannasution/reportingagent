@@ -291,6 +291,17 @@ def api_sap_summary():
 
 MAX_UPLOAD_FILES = 10
 
+
+def _looks_like_excel(filepath: str) -> bool:
+    """Cek magic bytes, bukan cuma ekstensi nama file (yang trivial diganti
+    siapapun). .xlsx adalah arsip ZIP (PK\\x03\\x04) -- ini bukan validasi
+    isi/struktur penuh, cuma memastikan file-nya benar-benar arsip ZIP,
+    bukan file lain (mis. teks biasa, executable) yang cuma diubah namanya
+    jadi .xlsx sebelum diproses openpyxl.load_workbook()."""
+    with open(filepath, "rb") as fh:
+        return fh.read(4) == b"PK\x03\x04"
+
+
 @app.route("/api/sap/upload", methods=["POST"])
 @limiter.limit("10/minute")
 def api_sap_upload():
@@ -329,6 +340,8 @@ def api_sap_upload():
         try:
             f.save(tmp.name)
             tmp.close()
+            if not _looks_like_excel(tmp.name):
+                raise ValueError("Isi file tidak cocok dengan format .xlsx (bukan arsip ZIP yang valid)")
             parsed = sap_parser.parse_file(tmp.name, batch_id)
             parsed_all.append((safe_name, tmp.name, parsed))
             if parsed["type"] == "notification": has_notif = True
