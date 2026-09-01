@@ -60,6 +60,45 @@ def require_login():
         return jsonify({"error": "Unauthorized", "redirect": "/login"}), 401
     return redirect(_sso_login_redirect())
 
+
+# ─── SECURITY HEADERS ──────────────────────────────────────────────────────
+# CSP di sini mengizinkan 'unsafe-inline' untuk script/style karena semua
+# template pakai <script> inline dan atribut style="..."/onclick="..." secara
+# luas -- menghilangkan itu berarti nonce/hash di tiap tag, refactor terpisah
+# yang jauh lebih besar dari sekadar "tambah header". Tetap jauh lebih ketat
+# daripada tanpa CSP sama sekali: object/frame diblokir, sumber script/style/
+# font dibatasi ke domain yang memang dipakai (Google Fonts + Chart.js lewat
+# cdnjs). Pola & rasional sama persis dengan ragrel/agent360/agentisomasterdata.
+_CSP = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com; "
+    "img-src 'self' data:; "
+    "connect-src 'self'; "
+    "object-src 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'; "
+    "frame-ancestors 'none'; "
+    "upgrade-insecure-requests"
+)
+
+@app.after_request
+def security_headers(response):
+    response.headers["Content-Security-Policy"] = _CSP
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=()"
+    # HSTS hanya kalau request memang datang lewat HTTPS (baca X-Forwarded-Proto
+    # dari proxy Railway, jangan andalkan request.scheme yang bisa saja "http"
+    # di sisi app walau client-nya sendiri connect via HTTPS).
+    proto = request.headers.get("X-Forwarded-Proto", request.scheme)
+    if proto == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
+    return response
+
+
 try:
     db.run_migrations()
 except Exception as e:
