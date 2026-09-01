@@ -30,6 +30,25 @@ app.register_blueprint(analytics_bp)
 app.register_blueprint(custom_chart_bp)
 
 
+# ─── CSRF — lapis kedua di atas cookie SameSite=Lax ──────────────────────────
+# Session cookie sudah SameSite=Lax, yang sudah memblokir sebagian besar CSRF
+# (form/fetch lintas situs tidak ikut kirim cookie untuk request
+# POST/PUT/PATCH/DELETE). Ini pertahanan tambahan: browser modern otomatis
+# kirim header Sec-Fetch-Site di semua request, menandai asal request lintas
+# situs atau bukan -- cek eksplisit ini tidak bergantung sepenuhnya pada
+# perilaku SameSite (yang bisa berbeda antar browser/versi). Kalau headernya
+# tidak ada (browser sangat lama, atau klien non-browser resmi) tetap
+# diloloskan supaya tidak salah blokir -- SameSite tetap jadi jaring pengaman
+# utamanya. Pola sama persis dengan ragrel, sso-login, agent360 &
+# agentisomasterdata.
+_CSRF_UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+@app.before_request
+def csrf_guard():
+    if request.method in _CSRF_UNSAFE_METHODS and request.headers.get("Sec-Fetch-Site") == "cross-site":
+        return jsonify({"error": "Request ditolak (indikasi cross-site request forgery)."}), 403
+
+
 @app.before_request
 def require_login():
     path = request.path
