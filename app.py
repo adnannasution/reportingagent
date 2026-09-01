@@ -2,7 +2,7 @@
 app.py — Executive Governance Web App
 """
 
-import os, uuid, tempfile, hashlib
+import os, uuid, tempfile
 from datetime import datetime, timedelta
 from flask import Flask, send_from_directory, request, jsonify, redirect
 from dotenv import load_dotenv
@@ -18,9 +18,29 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 app = Flask(__name__, static_folder=STATIC_DIR)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB
-app.config['SECRET_KEY'] = hashlib.sha256(
-    ("reportingagent:" + os.getenv("DATABASE_URL", "local")).encode()
-).hexdigest()
+
+# SECRET_KEY menandatangani session cookie (termasuk user_id/username/role di
+# dalamnya) -- sebelumnya diturunkan dari DATABASE_URL (hashlib.sha256(
+# "reportingagent:" + DATABASE_URL)), dan default ke "local" kalau env var itu
+# kosong. Itu berarti: (1) siapapun yang tahu/bisa menebak DATABASE_URL bisa
+# menghitung SECRET_KEY yang sama lalu memalsukan session cookie -- termasuk
+# memalsukan role=admin tanpa pernah login sama sekali, dan (2) kalau
+# DATABASE_URL lupa di-set, SECRET_KEY jadi nilai publik yang bisa dihitung
+# siapapun (sha256("reportingagent:local")). Sekarang wajib diisi env var
+# rahasia acak terpisah -- gagal keras di startup kalau lupa, sama seperti
+# pola SSO_SECRET di service lain. Harus SAMA di semua worker gunicorn (dan
+# tetap sama antar restart) supaya session yang dibuat di satu worker tetap
+# valid dibaca worker lain -- karena itu nilainya harus datang dari env var
+# yang di-set sekali, bukan di-generate random saat proses start.
+FLASK_SECRET_KEY = os.environ.get("FLASK_SECRET_KEY", "")
+if not FLASK_SECRET_KEY:
+    raise RuntimeError(
+        "FLASK_SECRET_KEY belum diset. Isi env var ini dengan nilai rahasia acak "
+        "(mis. hasil `python3 -c \"import secrets; print(secrets.token_hex(32))\"`), "
+        "JANGAN diturunkan dari nilai lain (DATABASE_URL dsb) -- nilai ini menandatangani "
+        "session cookie, siapapun yang tahu nilainya bisa memalsukan sesi login."
+    )
+app.config['SECRET_KEY'] = FLASK_SECRET_KEY
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=8)
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
