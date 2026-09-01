@@ -9,6 +9,7 @@ Endpoints:
 import traceback
 from flask import Blueprint, request, jsonify
 from db import db_cursor
+from rate_limit import limiter
 
 custom_chart_bp = Blueprint("custom_chart", __name__)
 
@@ -128,6 +129,7 @@ def filter_values():
 #  POST /api/custom/chart
 # ─────────────────────────────────────────────────────────────────────────────
 @custom_chart_bp.route("/api/custom/chart", methods=["POST"])
+@limiter.limit("30/minute")
 def build_chart():
     """
     Request body (JSON):

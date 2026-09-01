@@ -10,6 +10,7 @@ import db, agent, report_generator, sap_parser, control_tower_agent
 from analytics_routes import analytics_bp
 from custom_chart_routes import custom_chart_bp
 from auth_routes import auth_bp, PUBLIC_PREFIXES, _current_user, _bootstrap_sso_session, _sso_login_redirect
+from rate_limit import limiter
 
 load_dotenv()
 
@@ -28,6 +29,20 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.register_blueprint(auth_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(custom_chart_bp)
+
+# ─── RATE LIMITING ──────────────────────────────────────────────────────
+# Jaring pengaman terhadap akun disalahgunakan/bug klien yang nge-loop pada
+# endpoint yang mahal (generate report/memo/talking points/control tower --
+# semuanya panggil LLM -- dan upload & proses file Excel SAP). Endpoint
+# baca-saja/ringan sengaja dibiarkan tanpa limit. Pola sama seperti
+# ragrel & agent360 pada engagement yang sama (di sana pakai slowapi karena
+# FastAPI; di sini Flask-Limiter karena app ini Flask).
+limiter.init_app(app)
+
+
+@app.errorhandler(429)
+def ratelimit_handler(e):
+    return jsonify({"error": "Terlalu banyak request. Tunggu sebentar lalu coba lagi."}), 429
 
 
 # ─── CSRF — lapis kedua di atas cookie SameSite=Lax ──────────────────────────
@@ -147,6 +162,7 @@ def api_report_detail(report_id):
 
 # ── API: Generate Reports manual ──────────────────────────────────────────────
 @app.route("/api/generate/daily", methods=["POST"])
+@limiter.limit("10/minute")
 def api_generate_daily():
     try:
         content = report_generator.generate_daily()
@@ -156,6 +172,7 @@ def api_generate_daily():
         return jsonify({"error": "Gagal membuat laporan harian"}), 500
 
 @app.route("/api/generate/weekly", methods=["POST"])
+@limiter.limit("10/minute")
 def api_generate_weekly():
     try:
         content = report_generator.generate_weekly()
@@ -165,6 +182,7 @@ def api_generate_weekly():
         return jsonify({"error": "Gagal membuat laporan mingguan"}), 500
 
 @app.route("/api/generate/monthly", methods=["POST"])
+@limiter.limit("10/minute")
 def api_generate_monthly():
     try:
         content = report_generator.generate_monthly()
@@ -195,6 +213,7 @@ def api_memo_detail(memo_id):
         return jsonify({"error": "Gagal mengambil detail memo"}), 500
 
 @app.route("/api/memos/generate", methods=["POST"])
+@limiter.limit("10/minute")
 def api_generate_memo():
     data = request.json or {}
     report_ids = data.get("report_ids", [])
@@ -238,6 +257,7 @@ def api_tp_detail(tp_id):
         return jsonify({"error": "Gagal mengambil detail talking points"}), 500
 
 @app.route("/api/talking-points/generate", methods=["POST"])
+@limiter.limit("10/minute")
 def api_generate_tp():
     data = request.json or {}
     report_ids = data.get("report_ids", [])
@@ -272,6 +292,7 @@ def api_sap_summary():
 MAX_UPLOAD_FILES = 10
 
 @app.route("/api/sap/upload", methods=["POST"])
+@limiter.limit("10/minute")
 def api_sap_upload():
     files = request.files.getlist("files")
     if not files:
@@ -383,6 +404,7 @@ def api_ct_detail(ct_id):
         return jsonify({"error": "Gagal mengambil detail control tower"}), 500
 
 @app.route("/api/control-tower/generate", methods=["POST"])
+@limiter.limit("10/minute")
 def api_ct_generate():
     data    = request.json or {}
     context = str(data.get("context", ""))[:2000]
