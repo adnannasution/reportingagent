@@ -1,17 +1,25 @@
 """
-auth_routes.py — Login / Logout endpoints + session guard
+auth_routes.py — Login (redirect ke sso-login) / Logout endpoints + session guard
 
-Termasuk integrasi SSO dengan central login service (sso-login): cookie
-sso_token (JWT ditandatangani SSO_SECRET) di-bootstrap jadi Flask session
-di sini, jadi user yang sudah login di sso-login (atau service lain yang
-ikut SSO) tidak perlu login ulang.
+Login SEKARANG WAJIB lewat sso-login -- sebelumnya ada login lokal
+(/api/auth/login) yang verifikasi password langsung ke tabel users di
+database bersama, tanpa CAPTCHA maupun MFA sama sekali. Session hasilnya
+lokal ke app ini saja (Flask session, bukan token SSO lintas-service), tapi
+tetap merusak jaminan MFA sso-login: siapapun yang tahu/menebak password
+akun bisa langsung masuk ke fitur executive reporting di sini tanpa faktor
+kedua. Dihapus -- SSO_SECRET & SSO_LOGIN_URL sekarang wajib diisi (gagal
+keras di startup kalau lupa), sama seperti pola di agent360 & agentisomasterdata.
+
+Cookie sso_token (JWT ditandatangani SSO_SECRET) di-bootstrap jadi Flask
+session di sini, jadi user yang sudah login di sso-login (atau service lain
+yang ikut SSO) tidak perlu login ulang.
 """
 
 import os
 from functools import wraps
 from urllib.parse import quote
 import jwt
-from flask import Blueprint, request, jsonify, session, redirect, url_for, send_from_directory
+from flask import Blueprint, request, jsonify, session, redirect, url_for
 import db
 
 auth_bp = Blueprint("auth", __name__)
@@ -22,10 +30,20 @@ STATIC_DIR = os.path.join(BASE_DIR, "static")
 PUBLIC_PREFIXES = ("/login", "/api/auth/", "/health", "/static/")
 
 # ─── SSO (Central Login Service) ────────────────────────────────────────
-# SSO_SECRET wajib sama persis dengan yang dipakai sso-login. Kalau kosong,
-# fitur SSO nonaktif (app ini tetap jalan dengan login lokal seperti biasa).
 SSO_SECRET    = os.environ.get("SSO_SECRET", "")
+if not SSO_SECRET:
+    raise RuntimeError(
+        "SSO_SECRET belum diset. Isi env var SSO_SECRET dengan nilai rahasia yang "
+        "sama persis di semua service yang ikut SSO (sso-login, ragrel, agent360, "
+        "agentisomasterdata, reportingagent)."
+    )
 SSO_LOGIN_URL = os.environ.get("SSO_LOGIN_URL", "").rstrip("/")
+if not SSO_LOGIN_URL:
+    raise RuntimeError(
+        "SSO_LOGIN_URL belum diset. Isi env var ini dengan URL sso-login (mis. "
+        "https://sso.example.com) -- semua login sekarang wajib lewat sana, tidak "
+        "ada lagi fallback ke login lokal."
+    )
 
 
 def _verify_sso_token(token):
@@ -72,14 +90,12 @@ def _bootstrap_sso_session():
 
 def _sso_login_redirect():
     """URL tujuan redirect kalau user belum login sama sekali."""
-    if SSO_LOGIN_URL:
-        return f"{SSO_LOGIN_URL}/login?redirect={quote(request.url, safe='')}"
-    return "/login"
+    return f"{SSO_LOGIN_URL}/login?redirect={quote(request.url, safe='')}"
 
 
 def _sso_logout_redirect():
     """URL tujuan setelah logout, supaya sesi SSO pusat ikut dihapus."""
-    return f"{SSO_LOGIN_URL}/logout" if SSO_LOGIN_URL else "/login"
+    return f"{SSO_LOGIN_URL}/logout"
 # ──────────────────────────────────────────────────────────────────────
 
 
@@ -98,28 +114,11 @@ def login_required(f):
 def login_page():
     if _current_user() or _bootstrap_sso_session():
         return redirect("/")
-    return send_from_directory(STATIC_DIR, "login.html")
-
-
-@auth_bp.route("/api/auth/login", methods=["POST"])
-def api_login():
-    data     = request.json or {}
-    username = str(data.get("username", "")).strip()
-    password = str(data.get("password", ""))
-
-    if not username or not password:
-        return jsonify({"error": "Username dan password wajib diisi"}), 400
-
-    user = db.verify_user(username, password)
-    if not user:
-        return jsonify({"error": "Username atau password salah"}), 401
-
-    session.permanent = True
-    session["user_id"]   = user["id"]
-    session["username"]  = user["username"]
-    session["role"]      = user["role"]
-
-    return jsonify({"ok": True, "username": user["username"], "role": user["role"]})
+    # next= dari query param (dipakai kalau /login diakses langsung, mis. dari
+    # bookmark lama), default ke root -- BUKAN request.url (yang menunjuk ke
+    # /login itu sendiri dan akan bikin hop balik ke sini lagi setelah login).
+    next_url = request.args.get("next") or request.host_url.rstrip("/") + "/"
+    return redirect(f"{SSO_LOGIN_URL}/login?redirect={quote(next_url, safe='')}")
 
 
 @auth_bp.route("/api/auth/logout", methods=["POST"])

@@ -440,35 +440,6 @@ def fetch_ct_output_detail(ct_id):
         return cur.fetchone()
 
 # ── Users / Auth ─────────────────────────────────────────────────────────────
-def verify_user(username: str, password: str):
-    """Verifikasi username + password. Return dict user atau None."""
-    import hashlib
-    with db_cursor() as cur:
-        cur.execute(
-            "SELECT id, username, hashed_password, role, is_active FROM users WHERE username=%s",
-            (username,)
-        )
-        row = cur.fetchone()
-
-    if not row:
-        return None
-    if not row["is_active"]:
-        return None
-
-    stored = row["hashed_password"]
-    try:
-        salt_hex, dk_hex = stored.split(":", 1)
-    except ValueError:
-        return None
-
-    salt = bytes.fromhex(salt_hex)
-    dk_check = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 200_000)
-    if dk_check.hex() != dk_hex:
-        return None
-
-    return {"id": row["id"], "username": row["username"], "role": row["role"]}
-
-
 def get_user_by_username(username: str):
     """Ambil user by username, tanpa cek password — dipakai untuk bootstrap SSO
     (identitas sudah diverifikasi lewat token dari central login)."""
