@@ -304,6 +304,13 @@ def api_sap_upload():
     upload_mode = request.form.get("mode", "tambah")  # 'tambah' atau 'replace'
     if upload_mode not in ("tambah", "replace"):
         upload_mode = "tambah"
+    # mode=replace TRUNCATE seluruh tabel SAP terkait (notifikasi/WO/BOM/CJI3)
+    # -- ini operasi destruktif yang mempengaruhi data bersama semua user,
+    # jadi dibatasi khusus admin. mode=tambah (append) tetap terbuka untuk
+    # semua user yang sudah login, sama seperti sebelumnya.
+    user = _current_user()
+    if upload_mode == "replace" and (not user or user.get("role") != "admin"):
+        return jsonify({"error": "Hanya admin yang bisa menghapus & mengganti data SAP (mode replace)"}), 403
     results     = []
 
     # Pre-scan semua file untuk tentukan tipe, lalu truncate sekali di awal
