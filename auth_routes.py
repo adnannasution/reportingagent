@@ -27,7 +27,8 @@ auth_bp = Blueprint("auth", __name__)
 BASE_DIR   = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-PUBLIC_PREFIXES = ("/login", "/api/auth/", "/health", "/static/")
+# /api/v1/ = API data untuk aplikasi lain; dijaga API key (data_api.require_key), bukan sesi login.
+PUBLIC_PREFIXES = ("/login", "/api/auth/", "/health", "/static/", "/api/v1/")
 
 # ─── SSO (Central Login Service) ────────────────────────────────────────
 SSO_SECRET    = os.environ.get("SSO_SECRET", "")
