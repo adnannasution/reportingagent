@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import db, agent, report_generator, sap_parser, control_tower_agent
 from analytics_routes import analytics_bp
 from custom_chart_routes import custom_chart_bp
+from data_api import data_api_bp
 from auth_routes import auth_bp, PUBLIC_PREFIXES, _current_user, _bootstrap_sso_session, _sso_login_redirect
 from rate_limit import limiter
 
@@ -49,6 +50,7 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.register_blueprint(auth_bp)
 app.register_blueprint(analytics_bp)
 app.register_blueprint(custom_chart_bp)
+app.register_blueprint(data_api_bp)
 
 # ─── RATE LIMITING ──────────────────────────────────────────────────────
 # Jaring pengaman terhadap akun disalahgunakan/bug klien yang nge-loop pada
