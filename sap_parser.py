@@ -3,6 +3,7 @@ sap_parser.py — Parse Excel SAP (IW29 / IW39) ke format DB
 Support: IW29 (Notification), IW39 PT02/PT03/PT05/PT08 (Work Orders)
 """
 
+import re
 import openpyxl
 from datetime import datetime, date
 
@@ -60,6 +61,25 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
         except ValueError:
             return None
 
+    # Kolom opsional yang namanya berbeda antar-varian layout IW29: dicocokkan tanpa beda huruf/spasi/tanda baca.
+    kunci = [re.sub(r'[^a-z0-9]', '', h.lower()) for h in header]
+
+    def col_any(*names):
+        for n in names:
+            k = re.sub(r'[^a-z0-9]', '', n.lower())
+            if k in kunci:
+                return kunci.index(k)
+        return None
+
+    def val(idx, r):
+        return r[idx] if idx is not None and idx < len(r) else None
+
+    c_prio = col_any('Priority')
+    c_prio_teks = col_any('Priority text', 'Priority.1', 'Prio. text')
+    c_mal_start = col_any('Malfunct.start', 'Malfunction start', 'Start of Malfunction', 'Malfunction Start Date')
+    c_mal_end = col_any('Malfunct.end', 'Malfunction end', 'End of Malfunction', 'Malfunction End Date')
+    c_breakdown = col_any('Breakdown', 'Breakdown Indicator', 'Breakdown indic.')
+
     results = []
     for r in rows[1:]:
         if not any(c is not None for c in r):
@@ -88,6 +108,12 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
             to_str(r[col('MaintPlant')] if col('MaintPlant') is not None else None),
             has_long,
             batch_id,
+            to_str(val(c_prio, r)),
+            to_str(val(c_prio_teks, r)),
+            to_date(val(c_mal_start, r)),
+            to_date(val(c_mal_end, r)),
+            (str(val(c_breakdown, r)).strip().upper() in ('X', '1', 'TRUE', 'YES', 'Y'))
+            if val(c_breakdown, r) is not None else None,
         ))
     return results
 

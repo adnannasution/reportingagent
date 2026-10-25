@@ -13,7 +13,9 @@ yang sama bisa dipakai:
   GET /api/v1/datasets/<nama>/export         seluruh dataset sekali jalan (CSV / NDJSON, streaming)
 
 Dataset:
-  sap-bom    sap_bom: Bill of Materials SAP per equipment (komponen, material, kuantitas, item text, ...)
+  sap-bom            sap_bom: Bill of Materials SAP per equipment (komponen, material, kuantitas, item text, ...)
+  sap-notifications  sap_notifications: notifikasi SAP IW29 (jenis M1/M2/M3, tanggal, equipment, functional
+                     location, status, prioritas, malfunction start/end bila ada di layout ekspor, ...)
 
 Auth: header `X-API-Key: <kunci>` (atau `Authorization: Bearer <kunci>`). Kunci diisi di Railway:
   DATA_API_KEYS = nama1=kunci1,nama2=kunci2       (satu kunci per aplikasi pemakai; cabut = hapus dari daftar)
@@ -50,6 +52,7 @@ PUBLIC_PREFIX = "/api/v1/"
 # nama dataset -> tabel, label, halaman
 _D = [
     ("sap-bom", "sap_bom", "SAP BOM (Bill of Materials)", "sap-upload"),
+    ("sap-notifications", "sap_notifications", "SAP Notifikasi (IW29)", "sap-upload"),
 ]
 DATASETS = {n: {"name": n, "table": t, "label": l, "page": p} for n, t, l, p in _D}
 

@@ -93,6 +93,13 @@ def run_migrations():
         "CREATE INDEX IF NOT EXISTS idx_sap_notif_status ON sap_notifications(system_status);",
         "CREATE INDEX IF NOT EXISTS idx_sap_notif_eq ON sap_notifications(equipment);",
         "CREATE INDEX IF NOT EXISTS idx_sap_notif_batch ON sap_notifications(upload_batch);",
+        # ── Kolom tambahan IW29: prioritas dan malfunction (untuk analisis keandalan App-Rel) ──
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS priority VARCHAR(5);",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS priority_text VARCHAR(60);",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_start DATE;",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_end DATE;",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS breakdown BOOLEAN;",
+        "CREATE INDEX IF NOT EXISTS idx_sap_notif_type ON sap_notifications(notif_type);",
 
         # ── SAP Work Orders (IW39 all PT types) ───────────────────
         """
@@ -343,8 +350,9 @@ def insert_sap_notifications(rows: list, batch_id: str):
             INSERT INTO sap_notifications
             (notif_type,notif_date,notification,system_status,req_start,required_end,
              main_workctr,planner_group,description,order_no,location,functional_loc,
-             equipment,criticality,maint_plant,has_long_text,upload_batch)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             equipment,criticality,maint_plant,has_long_text,upload_batch,
+             priority,priority_text,malfunction_start,malfunction_end,breakdown)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def insert_sap_work_orders(rows: list, batch_id: str):

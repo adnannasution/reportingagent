@@ -8,6 +8,7 @@ API data Excellent Dashboard dan agentisomasterdata. Detail lengkap ada di `data
 | Dataset | Isi |
 |---|---|
 | `sap-bom` | sap_bom: Bill of Materials SAP per equipment (komponen, deskripsi, kuantitas, satuan, item text, ...) |
+| `sap-notifications` | sap_notifications: notifikasi SAP IW29 (jenis, tanggal, equipment, functional location, status, prioritas, malfunction start/end, ...) |
 
 Endpoint: `GET /api/v1/datasets`, `/api/v1/pages`, `/api/v1/datasets/{nama}` (berhalaman `limit`/`after`, filter
 `?kolom=nilai`, `__in`, `__like`, ...), `/schema`, `/version`, `/export?format=ndjson|csv`.
