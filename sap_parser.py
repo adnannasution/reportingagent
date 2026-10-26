@@ -5,7 +5,7 @@ Support: IW29 (Notification), IW39 PT02/PT03/PT05/PT08 (Work Orders)
 
 import re
 import openpyxl
-from datetime import datetime, date
+from datetime import datetime, date, time
 
 
 def to_date(val):
@@ -14,6 +14,25 @@ def to_date(val):
     if isinstance(val, (datetime, date)):
         return val.date() if isinstance(val, datetime) else val
     return None
+
+def to_time(val):
+    """Jam dari sel Excel: datetime.time, datetime, atau teks 'HH:MM[:SS]'."""
+    if isinstance(val, datetime):
+        return val.time()
+    if isinstance(val, time):
+        return val
+    if isinstance(val, str):
+        m = re.match(r'^\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*$', val)
+        if m and int(m.group(1)) < 24 and int(m.group(2)) < 60:
+            return time(int(m.group(1)), int(m.group(2)), int(m.group(3) or 0))
+    return None
+
+def to_timestamp(day_val, time_val):
+    """Tanggal + jam (jam boleh kosong = 00:00) menjadi datetime."""
+    d = to_date(day_val)
+    if d is None:
+        return None
+    return datetime.combine(d, to_time(time_val) or time(0, 0))
 
 def to_str(val):
     if val is None:
@@ -74,11 +93,33 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
     def val(idx, r):
         return r[idx] if idx is not None and idx < len(r) else None
 
-    c_prio = col_any('Priority')
+    # Prioritas: beberapa layout IW29 punya dua kolom bernama "Priority" (teks mis. "-Routine-1 (RAM 3)"
+    # dan kode mis. "3", urutannya bisa berbeda). Kode = kolom yang isinya pendek (<= 2 karakter).
+    def pendek(idx):
+        isi = [str(r[idx]).strip() for r in rows[1:201] if idx < len(r) and r[idx] not in (None, '')]
+        isi = [x for x in isi if x]
+        return bool(isi) and sum(len(x) <= 2 for x in isi) * 2 >= len(isi)
+
+    prio_cols = [i for i, k in enumerate(kunci) if k == 'priority']
+    c_prio = next((i for i in prio_cols if pendek(i)), None)
     c_prio_teks = col_any('Priority text', 'Priority.1', 'Prio. text')
+    if c_prio_teks is None:
+        c_prio_teks = next((i for i in prio_cols if i != c_prio), None)
+    if c_prio is None and len(prio_cols) == 1 and c_prio_teks != prio_cols[0]:
+        c_prio = prio_cols[0]
     c_mal_start = col_any('Malfunct.start', 'Malfunction start', 'Start of Malfunction', 'Malfunction Start Date')
     c_mal_end = col_any('Malfunct.end', 'Malfunction end', 'End of Malfunction', 'Malfunction End Date')
+    # Jam malfunction: di layout RU7 "Start Malfn (T)" dan "Malfunction end" (berisi jam, sedangkan
+    # tanggal selesai di "Malfunct.end"). Kolom jam tidak boleh sama dengan kolom tanggal.
+    c_mal_start_t = col_any('Start Malfn (T)', 'Malfunct.start time', 'Malfunction start time', 'Start time of malfunction')
+    c_mal_end_t = col_any('End Malfn (T)', 'Malfunct.end time', 'Malfunction end time', 'End time of malfunction',
+                          'Malfunction end')
+    if c_mal_start_t == c_mal_start:
+        c_mal_start_t = None
+    if c_mal_end_t == c_mal_end:
+        c_mal_end_t = None
     c_breakdown = col_any('Breakdown', 'Breakdown Indicator', 'Breakdown indic.')
+    c_breakdown_dur = col_any('Breakdown dur.', 'Breakdown duration', 'Breakdown Dur')
 
     results = []
     for r in rows[1:]:
@@ -114,6 +155,9 @@ def parse_notification_file(filepath: str, batch_id: str) -> list:
             to_date(val(c_mal_end, r)),
             (str(val(c_breakdown, r)).strip().upper() in ('X', '1', 'TRUE', 'YES', 'Y'))
             if val(c_breakdown, r) is not None else None,
+            to_timestamp(val(c_mal_start, r), val(c_mal_start_t, r)),
+            to_timestamp(val(c_mal_end, r), val(c_mal_end_t, r)),
+            to_float(val(c_breakdown_dur, r)),
         ))
     return results
 

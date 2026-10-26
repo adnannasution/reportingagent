@@ -99,6 +99,11 @@ def run_migrations():
         "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_start DATE;",
         "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_end DATE;",
         "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS breakdown BOOLEAN;",
+        # Malfunction dengan jam (tanggal + jam dari layout ekspor) dan lama breakdown (jam) dari SAP.
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_start_at TIMESTAMP;",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS malfunction_end_at TIMESTAMP;",
+        "ALTER TABLE sap_notifications ADD COLUMN IF NOT EXISTS breakdown_hours DOUBLE PRECISION;",
+        "CREATE INDEX IF NOT EXISTS idx_sap_notif_no ON sap_notifications(notification);",
         "CREATE INDEX IF NOT EXISTS idx_sap_notif_type ON sap_notifications(notif_type);",
 
         # ── SAP Work Orders (IW39 all PT types) ───────────────────
@@ -346,13 +351,19 @@ def clear_sap_batch(batch_id: str, table: str):
 
 def insert_sap_notifications(rows: list, batch_id: str):
     with db_cursor() as cur:
+        # Unggah ulang notifikasi yang sama (mis. ekspor baru dengan kolom prioritas) menggantikan baris
+        # lama bernomor sama, bukan menggandakannya; notifikasi lain (RU lain) tidak tersentuh.
+        numbers = sorted({r[2] for r in rows if r[2]})
+        for i in range(0, len(numbers), 5000):
+            cur.execute("DELETE FROM sap_notifications WHERE notification = ANY(%s)", (numbers[i:i + 5000],))
         cur.executemany("""
             INSERT INTO sap_notifications
             (notif_type,notif_date,notification,system_status,req_start,required_end,
              main_workctr,planner_group,description,order_no,location,functional_loc,
              equipment,criticality,maint_plant,has_long_text,upload_batch,
-             priority,priority_text,malfunction_start,malfunction_end,breakdown)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             priority,priority_text,malfunction_start,malfunction_end,breakdown,
+             malfunction_start_at,malfunction_end_at,breakdown_hours)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         """, rows)
 
 def insert_sap_work_orders(rows: list, batch_id: str):
